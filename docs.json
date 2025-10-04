@@ -7,7 +7,6 @@
     "light": "#FFF",
     "dark": "#0D0D0D"
   },
-  "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
@@ -87,10 +86,7 @@
       }
     ]
   },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
+
   "api": {
     "playground": {
       "display": "interactive"
