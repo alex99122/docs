@@ -1,0 +1,117 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Payviox Documentation",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D0D0D",
+    "light": "#FFF",
+    "dark": "#0D0D0D",
+    "anchors": {
+      "from": "#0D0D0D",
+      "to": "#0D0D0D"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@payviox.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://dashboard.payviox.com"
+  },
+  "tabs": [
+    {
+      "name": "Quickstart",
+      "url": "quickstart"
+    },
+    {
+      "name": "SDK Integration",
+      "url": "sdk"
+    },
+    {
+      "name": "API Integration",
+      "url": "api"
+    },
+    {
+      "name": "Webhooks",
+      "url": "webhooks"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Quickstart",
+      "pages": [
+        "quickstart/overview",
+        "quickstart/integration-methods",
+        "quickstart/webhooks",
+        "quickstart/examples",
+        "quickstart/best-practices"
+      ]
+    },
+    {
+      "group": "SDK - Getting Started",
+      "pages": [
+        "sdk/introduction",
+        "sdk/installation"
+      ]
+    },
+    {
+      "group": "SDK - Integration",
+      "pages": [
+        "sdk/integration/redirect",
+        "sdk/integration/iframe"
+      ]
+    },
+    {
+      "group": "SDK - API Reference",
+      "pages": [
+        "sdk/api-reference/payviox-class",
+        "sdk/api-reference/payment-methods",
+        "sdk/api-reference/create-session",
+        "sdk/api-reference/open-session",
+        "sdk/api-reference/open-iframe",
+        "sdk/api-reference/get-payments-methods"
+      ]
+    },
+    {
+      "group": "API - Getting Started",
+      "pages": [
+        "api/introduction",
+        "api/authentication"
+      ]
+    },
+    {
+      "group": "API - Endpoints",
+      "pages": [
+        "api/endpoints/create-session",
+        "api/endpoints/get-payment-methods"
+      ]
+    },
+    {
+      "group": "Webhook Integration",
+      "pages": [
+        "webhooks/integration"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "x": "https://x.com/payviox",
+    "github": "https://github.com/payviox",
+    "linkedin": "https://linkedin.com/company/payviox"
+  },
+  "api": {
+    "baseUrl": "https://api.payviox.com",
+    "auth": {
+      "method": "bearer"
+    },
+    "playground": {
+      "mode": "show"
+    }
+  }
+}
