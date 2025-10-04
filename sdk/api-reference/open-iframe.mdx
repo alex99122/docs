@@ -1,0 +1,46 @@
+---
+title: "openIframe()"
+description: "Manually open an iframe for a payment session"
+icon: "window"
+---
+
+Manually opens an iframe for a given session ID.
+
+```typescript
+openIframe(sessionId: string): void
+```
+
+<Warning>
+This method requires `iframeConfig` to be set during SDK initialization via the `parameters` property.
+</Warning>
+
+## Parameters
+
+<ParamField path="sessionId" type="string" required>
+The session ID to display in the iframe.
+</ParamField>
+
+## Example
+
+```javascript
+const payviox = new Payviox('your_api_token');
+
+// Create session without automatic iframe
+const sessionId = await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Order payment',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_123',
+  items: [{ name: 'Product', quantity: 1, price: 5000 }]
+});
+
+// Configure and open iframe later
+payviox.openIframe(sessionId);
+```
+
+<Note>
+In most cases, using `iframeMode: true` in `createSession()` is more convenient than calling this method manually.
+</Note>
+

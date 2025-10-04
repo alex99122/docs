@@ -1,0 +1,85 @@
+---
+title: 'API Introduction'
+description: 'Build powerful payment integrations with the Payviox REST API'
+---
+
+## Welcome to Payviox API
+
+The Payviox REST API allows you to create payment sessions and manage payment methods programmatically. Our API is designed to be simple, secure, and easy to integrate.
+
+<Note>
+  **Try it now!** Each endpoint includes an interactive playground where you can test API calls directly from your browser using your API key.
+</Note>
+
+<CardGroup cols={2}>
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/api/authentication"
+  >
+    Learn how to authenticate your API requests
+  </Card>
+  <Card
+    title="Endpoints"
+    icon="bracket-curly"
+    href="/api/endpoints/create-session"
+  >
+    Explore available API endpoints
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="chart-line"
+    href="https://dashboard.payviox.com"
+  >
+    Monitor your payments
+  </Card>
+  <Card
+    title="Best Practices"
+    icon="star"
+    href="/api/authentication"
+  >
+    Security and authentication
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="RESTful Design">
+    Our API follows REST principles with predictable resource-oriented URLs, accepts JSON-encoded request bodies, and returns JSON-encoded responses.
+  </Accordion>
+
+  <Accordion title="Secure Authentication">
+    All API requests are authenticated using Bearer tokens. Your API keys are unique to your business and should be kept secure.
+  </Accordion>
+
+  <Accordion title="Multiple Payment Methods">
+    Support for various payment methods including cards, crypto, bank transfers, and more.
+  </Accordion>
+
+  <Accordion title="Real-time Updates">
+    Monitor payment status in real-time through your dashboard.
+  </Accordion>
+</AccordionGroup>
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.payviox.com
+```
+
+## Rate Limits
+
+The API has the following rate limits:
+- **100 requests per minute** for authenticated requests
+- **10 requests per minute** for unauthenticated requests
+
+## Support
+
+Need help? Contact our support team:
+- Email: support@payviox.com
+- Documentation: https://docs.payviox.com
+- Dashboard: https://dashboard.payviox.com
+

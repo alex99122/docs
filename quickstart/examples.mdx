@@ -1,0 +1,244 @@
+---
+title: "Complete Integration Examples"
+description: "Full code examples for SDK and API integration"
+icon: "file-code"
+---
+
+## Complete Integration Examples
+
+Here are complete, working examples of both SDK and API integration methods.
+
+## Option 1: SDK Integration (JavaScript)
+
+Full HTML page with SDK integration:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payviox Payment</title>
+</head>
+<body>
+  <h1>Complete your purchase</h1>
+  <p>Total: $10.00</p>
+  <button onclick="initiatePayment()">Pay Now</button>
+
+  <script src="https://cdn.payviox.com/sdk/payviox.js"></script>
+  <script>
+    const payviox = new Payviox('your_api_token');
+
+    async function initiatePayment() {
+      try {
+        await payviox.createSession({
+          amount: 1000,
+          currency: 'USD',
+          customer: 'customer_123',
+          description: 'Premium Subscription',
+          paymentMethodId: 'pm_card',
+          order_id: 'order_' + Date.now(),
+          items: [{
+            name: 'Premium Subscription',
+            quantity: 1,
+            price: 1000
+          }]
+        }, {
+          redirect: true // Automatically redirect
+        });
+      } catch (error) {
+        alert('Payment failed: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
+```
+
+<Check>
+When you click "Pay Now", the SDK automatically creates a session and redirects to the secure payment page.
+</Check>
+
+## Option 2: API Integration (cURL)
+
+Create a payment session using the REST API:
+
+```bash
+curl -X POST https://api.payviox.com/session \
+  -H "Authorization: Bearer your_api_token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "USD",
+    "customer": "customer_123",
+    "description": "Premium Subscription",
+    "paymentMethodId": "pm_card",
+    "order_id": "order_12345",
+    "items": [{
+      "name": "Premium Subscription",
+      "quantity": 1,
+      "price": 1000
+    }]
+  }'
+```
+
+Then redirect the customer to the returned session URL.
+
+## Webhook Handler Examples
+
+Both integration methods require a webhook handler on your server.
+
+<CodeGroup>
+
+```php PHP
+<?php
+// Receive webhook notification
+$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_SIGNATURE'];
+
+// Verify signature
+$computed = hash_hmac('sha256', $payload, 'your_webhook_token');
+if (!hash_equals($computed, $signature)) {
+    http_response_code(401);
+    exit('Invalid signature');
+}
+
+// Parse webhook data
+$data = json_decode($payload, true);
+
+// Handle successful payment
+if ($data['type'] === 'succeeded') {
+    // Fulfill the order
+    fulfillOrder($data['order_id']);
+    
+    // Send confirmation email
+    sendConfirmationEmail($data);
+}
+
+// Return 200 OK
+http_response_code(200);
+echo json_encode(['status' => 'success']);
+```
+
+```javascript Node.js
+const express = require('express');
+const crypto = require('crypto');
+
+const app = express();
+
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const payload = req.body.toString('utf8');
+  const signature = req.headers['signature'];
+  
+  // Verify signature
+  const computed = crypto
+    .createHmac('sha256', process.env.WEBHOOK_TOKEN)
+    .update(payload)
+    .digest('hex');
+  
+  if (computed !== signature) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Parse webhook data
+  const data = JSON.parse(payload);
+  
+  // Handle successful payment
+  if (data.type === 'succeeded') {
+    fulfillOrder(data.order_id);
+    sendConfirmationEmail(data);
+  }
+  
+  res.json({ status: 'success' });
+});
+
+app.listen(3000);
+```
+
+```python Python
+from flask import Flask, request, jsonify
+import hmac
+import hashlib
+import json
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    payload = request.get_data(as_text=True)
+    signature = request.headers.get('Signature')
+    
+    # Verify signature
+    computed = hmac.new(
+        webhook_token.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(computed, signature):
+        return jsonify({'error': 'Invalid signature'}), 401
+    
+    # Parse webhook data
+    data = json.loads(payload)
+    
+    # Handle successful payment
+    if data['type'] == 'succeeded':
+        fulfill_order(data['order_id'])
+        send_confirmation_email(data)
+    
+    return jsonify({'status': 'success'})
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+</CodeGroup>
+
+## Testing Your Integration
+
+<Steps>
+<Step title="Use test credentials">
+Use your test API token to avoid real charges:
+```javascript
+const payviox = new Payviox('pk_test_xxxxxxxxxxxxx');
+```
+</Step>
+
+<Step title="Test card numbers">
+Use these test card numbers in the payment form:
+- `4242 4242 4242 4242` - Successful payment
+- `4000 0000 0000 0002` - Card declined
+- `4000 0000 0000 0341` - Insufficient funds
+</Step>
+
+<Step title="Test webhooks locally">
+Use [ngrok](https://ngrok.com) to expose your local server:
+```bash
+ngrok http 3000
+```
+Then configure the ngrok URL as your webhook URL.
+</Step>
+
+<Step title="Monitor in dashboard">
+View all test transactions in your [dashboard](https://dashboard.payviox.com/payments).
+</Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="SDK Documentation" icon="code" href="/sdk/introduction">
+Learn more about the SDK
+</Card>
+
+<Card title="API Documentation" icon="server" href="/api/introduction">
+Explore the REST API
+</Card>
+
+<Card title="Webhook Guide" icon="webhook" href="/webhooks/integration">
+Complete webhook documentation
+</Card>
+
+<Card title="Best Practices" icon="shield-check" href="/quickstart/best-practices">
+Security and best practices
+</Card>
+</CardGroup>
+

@@ -1,0 +1,203 @@
+---
+title: "Quickstart"
+description: "Create your first payment session in minutes with the Payviox SDK"
+icon: "rocket"
+---
+
+## Complete your first integration
+
+This guide walks you through creating a payment session and redirecting customers to complete their payment.
+
+<Info>
+**What you'll build**: A simple payment integration using redirect mode.
+
+**Time required**: 10 minutes
+</Info>
+
+## Step 1: Set up your HTML
+
+Create a basic HTML page with a payment button:
+
+```html index.html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payviox Payment</title>
+</head>
+<body>
+  <h1>Complete your purchase</h1>
+  <p>Total: $10.00</p>
+  <button onclick="initiatePayment()">Pay Now</button>
+
+  <script src="https://cdn.payviox.com/sdk/payviox.js"></script>
+  <script src="payment.js"></script>
+</body>
+</html>
+```
+
+## Step 2: Initialize the SDK
+
+Create a `payment.js` file and initialize the Payviox SDK:
+
+```javascript payment.js
+// Initialize the SDK with your API token
+const payviox = new Payviox('your_api_token');
+
+async function initiatePayment() {
+  try {
+    // Payment session configuration
+    const sessionId = await payviox.createSession({
+      amount: 1000, // Amount in cents (10.00 USD)
+      currency: 'USD',
+      customer: 'customer_123456',
+      description: 'Order #12345',
+      paymentMethodId: 'pm_card',
+      order_id: 'order_12345',
+      items: [
+        {
+          name: 'Premium Subscription',
+          quantity: 1,
+          price: 1000
+        }
+      ]
+    }, {
+      redirect: true // Automatic redirect to payment page
+    });
+    
+    console.log('Payment session created:', sessionId);
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert('Payment initialization failed. Please try again.');
+  }
+}
+```
+
+<Check>
+When you click the "Pay Now" button, you'll be redirected to the secure Payviox payment page.
+</Check>
+
+## Step 3: Handle payment completion
+
+After the customer completes payment, they'll be redirected back to your site. Set up a success page:
+
+```javascript success.js
+// Extract session ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const sessionId = urlParams.get('session_id');
+
+if (sessionId) {
+  console.log('Payment completed for session:', sessionId);
+  
+  // Send confirmation to your server
+  fetch('/api/payment-confirmation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId })
+  });
+}
+```
+
+## Complete example
+
+Here's the full working example:
+
+```javascript payment.js
+const payviox = new Payviox('your_api_token');
+
+async function initiatePayment() {
+  try {
+    await payviox.createSession({
+      amount: 1000,
+      currency: 'USD',
+      customer: 'customer_' + Date.now(),
+      description: 'Premium Subscription',
+      paymentMethodId: 'pm_card',
+      order_id: 'order_' + Date.now(),
+      items: [
+        {
+          name: 'Premium Subscription',
+          quantity: 1,
+          price: 1000
+        }
+      ]
+    }, {
+      redirect: true
+    });
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert('Payment failed: ' + error.message);
+  }
+}
+```
+
+## Testing your integration
+
+<Steps>
+<Step title="Use test credentials">
+Use your test API token to avoid real charges:
+```javascript
+const payviox = new Payviox('pk_test_xxxxxxxxxxxxx');
+```
+</Step>
+
+<Step title="Test card numbers">
+Use these test card numbers in the payment form:
+
+| Card Number | Result |
+|------------|---------|
+| 4242 4242 4242 4242 | Success |
+| 4000 0000 0000 0002 | Card declined |
+| 4000 0000 0000 0341 | Insufficient funds |
+</Step>
+
+<Step title="Monitor in dashboard">
+View test transactions in your [Payviox dashboard](https://dashboard.payviox.com/payments).
+</Step>
+</Steps>
+
+## Common issues
+
+<AccordionGroup>
+<Accordion title="401 Unauthorized error">
+**Cause**: Invalid or missing API token.
+
+**Solution**: Verify your API token in the dashboard and ensure it's correctly copied.
+```javascript
+// Verify that the token is correct
+const payviox = new Payviox('your_actual_token');
+```
+</Accordion>
+
+<Accordion title="Redirect not working">
+**Cause**: Browser blocking the redirect or popup blockers.
+
+**Solution**: Ensure the payment is triggered by a user action (button click) and disable popup blockers.
+</Accordion>
+
+<Accordion title="CORS errors">
+**Cause**: Domain not whitelisted in Payviox settings.
+
+**Solution**: Add your domain to the allowed origins in your dashboard settings.
+</Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Iframe integration" icon="window" href="/sdk/integration/iframe">
+Embed payments directly in your page
+</Card>
+
+<Card title="Payment methods" icon="credit-card" href="/sdk/payment-methods">
+Discover and filter payment options
+</Card>
+
+<Card title="Error handling" icon="triangle-exclamation" href="/sdk/error-handling">
+Handle errors gracefully
+</Card>
+
+<Card title="API reference" icon="book" href="/sdk/api-reference/payviox-class">
+Explore all available methods
+</Card>
+</CardGroup>
+

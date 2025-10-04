@@ -1,0 +1,637 @@
+---
+title: 'Webhook Integration'
+description: 'Learn how to receive and verify webhook notifications from Payviox'
+---
+
+## Overview
+
+Webhooks allow Payviox to send real-time notifications to your server when payment events occur. When a payment is processed, Payviox sends an HTTP POST request to your configured webhook URL with the payment details.
+
+<Info>
+  Webhooks are essential for keeping your application synchronized with payment statuses. Configure your webhook URL in the [Payviox Dashboard](https://dashboard.payviox.com) under **Settings** > **Webhooks**.
+</Info>
+
+## Webhook Configuration
+
+### Setting Up Your Webhook URL
+
+<Steps>
+  <Step title="Configure Your Endpoint">
+    Create an endpoint on your server to receive POST requests (e.g., `https://yourdomain.com/api/webhook`)
+  </Step>
+  <Step title="Add URL to Dashboard">
+    Go to your [Payviox Dashboard](https://dashboard.payviox.com) and navigate to **Settings** > **Webhooks**
+  </Step>
+  <Step title="Enter Your Webhook URL">
+    Paste your endpoint URL in the webhook URL field
+  </Step>
+  <Step title="Save Your Webhook Token">
+    Copy your webhook token - you'll need it to verify webhook signatures
+  </Step>
+</Steps>
+
+<Warning>
+  Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
+</Warning>
+
+## Webhook Payload Structure
+
+Payviox sends webhooks with the following structure:
+
+```json
+{
+  "amount": 10000,
+  "currency": "USD",
+  "metadata": {
+    "integration_session_id": "sess_abc123xyz"
+  },
+  "type": "succeeded",
+  "provider": "stripe",
+  "order_id": "order_123456",
+  "items": [
+    {
+      "name": "Premium Subscription",
+      "quantity": 1,
+      "price": 10000
+    }
+  ],
+  "payment_method": "card"
+}
+```
+
+### Payload Fields
+
+<ParamField path="amount" type="integer" required>
+  The payment amount in the smallest currency unit (e.g., cents for USD)
+</ParamField>
+
+<ParamField path="currency" type="string" required>
+  Three-letter ISO currency code (e.g., USD, EUR, GBP)
+</ParamField>
+
+<ParamField path="metadata" type="object" required>
+  Custom metadata associated with the payment session
+  
+  <Expandable title="metadata properties">
+    <ParamField path="integration_session_id" type="string">
+      The unique session identifier from Payviox
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  The payment status. Possible values:
+  - `succeeded`: Payment completed successfully
+  - `processing`: Payment is being processed
+  - `canceled`: Payment was canceled
+  - `requires_payment_method`: Additional payment method required
+  - `requires_confirmation`: Payment requires confirmation
+  - `requires_action`: Additional action required from customer
+</ParamField>
+
+<ParamField path="provider" type="string" required>
+  The payment provider used (e.g., stripe, paypal, crypto)
+</ParamField>
+
+<ParamField path="order_id" type="string" required>
+  Your unique order identifier
+</ParamField>
+
+<ParamField path="items" type="array" required>
+  Array of items purchased
+  
+  <Expandable title="item properties">
+    <ParamField path="name" type="string">
+      Item name
+    </ParamField>
+    <ParamField path="quantity" type="integer">
+      Quantity purchased
+    </ParamField>
+    <ParamField path="price" type="integer">
+      Item price in smallest currency unit
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="payment_method" type="string">
+  Specific payment method used (e.g., card, bank_transfer)
+</ParamField>
+
+## Webhook Headers
+
+Every webhook request includes these headers:
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | Always `application/json` |
+| `Signature` | HMAC SHA256 signature for verification |
+
+## Signature Verification
+
+<Warning>
+  **Critical Security Step:** Always verify the webhook signature before processing the payload. This ensures the request is legitimate and from Payviox.
+</Warning>
+
+The `Signature` header contains an HMAC SHA256 hash of the request body, signed with your webhook token. Here's how to verify it:
+
+### Verification Algorithm
+
+1. Get the raw request body (JSON string)
+2. Compute HMAC SHA256 hash using your webhook token as the secret key
+3. Compare the computed signature with the `Signature` header
+4. Only process the webhook if signatures match
+
+### Implementation Examples
+
+<CodeGroup>
+
+```php PHP
+<?php
+
+function verifyWebhookSignature($payload, $receivedSignature, $webhookToken) {
+    // Compute the expected signature
+    $computedSignature = hash_hmac('sha256', $payload, $webhookToken);
+    
+    // Use hash_equals to prevent timing attacks
+    return hash_equals($computedSignature, $receivedSignature);
+}
+
+// Example usage in a Laravel controller
+public function handleWebhook(Request $request) {
+    // Get the raw payload
+    $payload = $request->getContent();
+    
+    // Get the signature from headers
+    $receivedSignature = $request->header('Signature');
+    
+    // Your webhook token from the dashboard
+    $webhookToken = env('PAYVIOX_WEBHOOK_TOKEN');
+    
+    // Verify the signature
+    if (!verifyWebhookSignature($payload, $receivedSignature, $webhookToken)) {
+        // Invalid signature - reject the request
+        return response()->json(['error' => 'Invalid signature'], 401);
+    }
+    
+    // Parse the verified payload
+    $data = json_decode($payload, true);
+    
+    // Process the webhook based on type
+    switch ($data['type']) {
+        case 'succeeded':
+            // Payment succeeded - fulfill the order
+            $this->fulfillOrder($data['order_id'], $data);
+            break;
+            
+        case 'processing':
+            // Payment is processing - update order status
+            $this->updateOrderStatus($data['order_id'], 'processing');
+            break;
+            
+        case 'canceled':
+            // Payment was canceled - handle cancellation
+            $this->cancelOrder($data['order_id']);
+            break;
+            
+        case 'requires_action':
+            // Customer action required - notify customer
+            $this->notifyCustomerActionRequired($data['order_id']);
+            break;
+    }
+    
+    // Return 200 OK to acknowledge receipt
+    return response()->json(['status' => 'success'], 200);
+}
+
+private function fulfillOrder($orderId, $webhookData) {
+    // Your order fulfillment logic
+    $order = Order::where('order_id', $orderId)->first();
+    
+    if ($order) {
+        $order->status = 'completed';
+        $order->payment_provider = $webhookData['provider'];
+        $order->payment_amount = $webhookData['amount'];
+        $order->session_id = $webhookData['metadata']['integration_session_id'];
+        $order->save();
+        
+        // Send confirmation email, provision services, etc.
+    }
+}
+```
+
+```javascript Node.js / Express
+const crypto = require('crypto');
+const express = require('express');
+
+function verifyWebhookSignature(payload, receivedSignature, webhookToken) {
+    // Compute the expected signature
+    const computedSignature = crypto
+        .createHmac('sha256', webhookToken)
+        .update(payload)
+        .digest('hex');
+    
+    // Use timingSafeEqual to prevent timing attacks
+    return crypto.timingSafeEqual(
+        Buffer.from(computedSignature),
+        Buffer.from(receivedSignature)
+    );
+}
+
+const app = express();
+
+// Important: Use express.raw() to get the raw body for signature verification
+app.post('/api/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    // Get the raw payload as string
+    const payload = req.body.toString('utf8');
+    
+    // Get the signature from headers
+    const receivedSignature = req.headers['signature'];
+    
+    // Your webhook token from environment variable
+    const webhookToken = process.env.PAYVIOX_WEBHOOK_TOKEN;
+    
+    // Verify the signature
+    if (!verifyWebhookSignature(payload, receivedSignature, webhookToken)) {
+        return res.status(401).json({ error: 'Invalid signature' });
+    }
+    
+    // Parse the verified payload
+    const data = JSON.parse(payload);
+    
+    // Process the webhook based on type
+    switch (data.type) {
+        case 'succeeded':
+            fulfillOrder(data.order_id, data);
+            break;
+            
+        case 'processing':
+            updateOrderStatus(data.order_id, 'processing');
+            break;
+            
+        case 'canceled':
+            cancelOrder(data.order_id);
+            break;
+            
+        case 'requires_action':
+            notifyCustomerActionRequired(data.order_id);
+            break;
+    }
+    
+    // Return 200 OK to acknowledge receipt
+    res.json({ status: 'success' });
+});
+
+async function fulfillOrder(orderId, webhookData) {
+    // Your order fulfillment logic
+    const order = await Order.findOne({ order_id: orderId });
+    
+    if (order) {
+        order.status = 'completed';
+        order.payment_provider = webhookData.provider;
+        order.payment_amount = webhookData.amount;
+        order.session_id = webhookData.metadata.integration_session_id;
+        await order.save();
+        
+        // Send confirmation email, provision services, etc.
+    }
+}
+
+app.listen(3000, () => {
+    console.log('Webhook server listening on port 3000');
+});
+```
+
+```python Python / Flask
+import hmac
+import hashlib
+import json
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+def verify_webhook_signature(payload, received_signature, webhook_token):
+    """Verify the webhook signature"""
+    # Compute the expected signature
+    computed_signature = hmac.new(
+        webhook_token.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Use compare_digest to prevent timing attacks
+    return hmac.compare_digest(computed_signature, received_signature)
+
+@app.route('/api/webhook', methods=['POST'])
+def handle_webhook():
+    # Get the raw payload
+    payload = request.get_data(as_text=True)
+    
+    # Get the signature from headers
+    received_signature = request.headers.get('Signature')
+    
+    # Your webhook token from environment variable
+    webhook_token = os.environ.get('PAYVIOX_WEBHOOK_TOKEN')
+    
+    # Verify the signature
+    if not verify_webhook_signature(payload, received_signature, webhook_token):
+        return jsonify({'error': 'Invalid signature'}), 401
+    
+    # Parse the verified payload
+    data = json.loads(payload)
+    
+    # Process the webhook based on type
+    if data['type'] == 'succeeded':
+        fulfill_order(data['order_id'], data)
+    elif data['type'] == 'processing':
+        update_order_status(data['order_id'], 'processing')
+    elif data['type'] == 'canceled':
+        cancel_order(data['order_id'])
+    elif data['type'] == 'requires_action':
+        notify_customer_action_required(data['order_id'])
+    
+    # Return 200 OK to acknowledge receipt
+    return jsonify({'status': 'success'}), 200
+
+def fulfill_order(order_id, webhook_data):
+    """Handle successful payment"""
+    # Your order fulfillment logic
+    order = Order.query.filter_by(order_id=order_id).first()
+    
+    if order:
+        order.status = 'completed'
+        order.payment_provider = webhook_data['provider']
+        order.payment_amount = webhook_data['amount']
+        order.session_id = webhook_data['metadata']['integration_session_id']
+        db.session.commit()
+        
+        # Send confirmation email, provision services, etc.
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+```ruby Ruby / Sinatra
+require 'sinatra'
+require 'json'
+require 'openssl'
+
+def verify_webhook_signature(payload, received_signature, webhook_token)
+  # Compute the expected signature
+  computed_signature = OpenSSL::HMAC.hexdigest(
+    OpenSSL::Digest.new('sha256'),
+    webhook_token,
+    payload
+  )
+  
+  # Use secure_compare to prevent timing attacks
+  Rack::Utils.secure_compare(computed_signature, received_signature)
+end
+
+post '/api/webhook' do
+  # Get the raw payload
+  request.body.rewind
+  payload = request.body.read
+  
+  # Get the signature from headers
+  received_signature = request.env['HTTP_SIGNATURE']
+  
+  # Your webhook token from environment variable
+  webhook_token = ENV['PAYVIOX_WEBHOOK_TOKEN']
+  
+  # Verify the signature
+  unless verify_webhook_signature(payload, received_signature, webhook_token)
+    halt 401, { error: 'Invalid signature' }.to_json
+  end
+  
+  # Parse the verified payload
+  data = JSON.parse(payload)
+  
+  # Process the webhook based on type
+  case data['type']
+  when 'succeeded'
+    fulfill_order(data['order_id'], data)
+  when 'processing'
+    update_order_status(data['order_id'], 'processing')
+  when 'canceled'
+    cancel_order(data['order_id'])
+  when 'requires_action'
+    notify_customer_action_required(data['order_id'])
+  end
+  
+  # Return 200 OK to acknowledge receipt
+  content_type :json
+  { status: 'success' }.to_json
+end
+
+def fulfill_order(order_id, webhook_data)
+  # Your order fulfillment logic
+  order = Order.find_by(order_id: order_id)
+  
+  if order
+    order.status = 'completed'
+    order.payment_provider = webhook_data['provider']
+    order.payment_amount = webhook_data['amount']
+    order.session_id = webhook_data['metadata']['integration_session_id']
+    order.save
+    
+    # Send confirmation email, provision services, etc.
+  end
+end
+```
+
+```go Go
+package main
+
+import (
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "io"
+    "log"
+    "net/http"
+    "os"
+)
+
+type WebhookPayload struct {
+    Amount        int                    `json:"amount"`
+    Currency      string                 `json:"currency"`
+    Metadata      map[string]interface{} `json:"metadata"`
+    Type          string                 `json:"type"`
+    Provider      string                 `json:"provider"`
+    OrderID       string                 `json:"order_id"`
+    Items         []Item                 `json:"items"`
+    PaymentMethod string                 `json:"payment_method"`
+}
+
+type Item struct {
+    Name     string `json:"name"`
+    Quantity int    `json:"quantity"`
+    Price    int    `json:"price"`
+}
+
+func verifyWebhookSignature(payload string, receivedSignature string, webhookToken string) bool {
+    // Compute the expected signature
+    mac := hmac.New(sha256.New, []byte(webhookToken))
+    mac.Write([]byte(payload))
+    computedSignature := hex.EncodeToString(mac.Sum(nil))
+    
+    // Use hmac.Equal to prevent timing attacks
+    return hmac.Equal([]byte(computedSignature), []byte(receivedSignature))
+}
+
+func handleWebhook(w http.ResponseWriter, r *http.Request) {
+    // Get the raw payload
+    body, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "Error reading request body", http.StatusBadRequest)
+        return
+    }
+    payload := string(body)
+    
+    // Get the signature from headers
+    receivedSignature := r.Header.Get("Signature")
+    
+    // Your webhook token from environment variable
+    webhookToken := os.Getenv("PAYVIOX_WEBHOOK_TOKEN")
+    
+    // Verify the signature
+    if !verifyWebhookSignature(payload, receivedSignature, webhookToken) {
+        http.Error(w, `{"error": "Invalid signature"}`, http.StatusUnauthorized)
+        return
+    }
+    
+    // Parse the verified payload
+    var data WebhookPayload
+    if err := json.Unmarshal(body, &data); err != nil {
+        http.Error(w, "Error parsing JSON", http.StatusBadRequest)
+        return
+    }
+    
+    // Process the webhook based on type
+    switch data.Type {
+    case "succeeded":
+        fulfillOrder(data.OrderID, data)
+    case "processing":
+        updateOrderStatus(data.OrderID, "processing")
+    case "canceled":
+        cancelOrder(data.OrderID)
+    case "requires_action":
+        notifyCustomerActionRequired(data.OrderID)
+    }
+    
+    // Return 200 OK to acknowledge receipt
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+func fulfillOrder(orderID string, webhookData WebhookPayload) {
+    // Your order fulfillment logic
+    log.Printf("Fulfilling order %s", orderID)
+    // Update database, send emails, provision services, etc.
+}
+
+func main() {
+    http.HandleFunc("/api/webhook", handleWebhook)
+    log.Println("Webhook server listening on port 3000")
+    log.Fatal(http.ListenAndServe(":3000", nil))
+}
+```
+
+</CodeGroup>
+
+## Retry Logic
+
+Payviox implements an automatic retry mechanism for failed webhook deliveries:
+
+<Steps>
+  <Step title="First Attempt">
+    Instant delivery (0 seconds)
+  </Step>
+  <Step title="Second Attempt">
+    30 seconds after first failure
+  </Step>
+  <Step title="Third Attempt">
+    5 minutes after second failure
+  </Step>
+  <Step title="Fourth Attempt">
+    30 minutes after third failure
+  </Step>
+</Steps>
+
+<Info>
+  After 4 failed attempts, the webhook will be marked as failed. You can manually retry failed webhooks from the Payviox Dashboard.
+</Info>
+
+### Success Criteria
+
+A webhook is considered successfully delivered when your endpoint:
+- Returns HTTP status code `200`
+- Responds within 30 seconds
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Signature Verification Failing">
+    **Possible causes:**
+    - Using the wrong webhook token
+    - Parsing/modifying the request body before verification
+    - Incorrect HMAC algorithm (must be SHA256)
+    
+    **Solution:** Always verify against the raw request body, before any parsing or modifications.
+  </Accordion>
+  
+  <Accordion title="Webhooks Not Being Received">
+    **Possible causes:**
+    - Incorrect webhook URL in dashboard
+    - Firewall blocking Payviox IP addresses
+    - Server not responding within 30 seconds
+    
+    **Solution:** Check your webhook URL configuration and server logs.
+  </Accordion>
+  
+  <Accordion title="Duplicate Webhook Processing">
+    **Possible causes:**
+    - Not implementing idempotency checks
+    - Slow response times causing retries
+    
+    **Solution:** Implement idempotency using session_id and order_id, and respond quickly with 200 OK.
+  </Accordion>
+  
+  <Accordion title="Webhook Timeout">
+    **Possible causes:**
+    - Processing taking too long before responding
+    - Database locks or slow queries
+    
+    **Solution:** Return 200 OK immediately and process webhooks asynchronously in a queue.
+  </Accordion>
+</AccordionGroup>
+
+## Security Checklist
+
+<Checklist>
+  <Check>Always verify webhook signatures before processing</Check>
+  <Check>Use HTTPS for your webhook endpoint</Check>
+  <Check>Store webhook token securely (environment variables)</Check>
+  <Check>Implement rate limiting on your webhook endpoint</Check>
+  <Check>Log all webhook attempts with timestamps</Check>
+  <Check>Validate webhook payload structure</Check>
+  <Check>Use timing-safe comparison functions for signature verification</Check>
+  <Check>Implement idempotency to handle duplicate webhooks</Check>
+</Checklist>
+
+## Need Help?
+
+If you're having trouble with webhook integration:
+
+- Check the [Webhook Logs](https://dashboard.payviox.com/webhooks) in your dashboard
+- Review your server logs for errors
+- Contact [support@payviox.com](mailto:support@payviox.com) for assistance
+
+<Tip>
+  Include your webhook attempt IDs from the dashboard when contacting support for faster resolution.
+</Tip>
+

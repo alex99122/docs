@@ -1,0 +1,173 @@
+---
+title: "Redirect integration"
+description: "Redirect customers to a secure hosted payment page"
+icon: "arrow-up-right-from-square"
+---
+
+## Overview
+
+Redirect mode redirects your customers to a Payviox-hosted payment page where they complete their payment. This is the simplest and most secure integration method.
+
+<Tip>
+Redirect mode is recommended for:
+- Quick integrations
+- Maximum PCI compliance
+- When you don't need custom payment UI
+</Tip>
+
+## How it works
+
+<Steps>
+<Step title="Create payment session">
+Your application creates a payment session with customer and order details.
+</Step>
+
+<Step title="Redirect to Payviox">
+Customer is redirected to the secure Payviox payment page using the session ID.
+</Step>
+
+<Step title="Customer completes payment">
+Customer enters their payment information on the Payviox-hosted page.
+</Step>
+
+<Step title="Return to your site">
+After payment, customer is redirected back to your specified URL with the payment result.
+</Step>
+</Steps>
+
+## Implementation
+
+### Example with automatic redirect
+
+```javascript payment.js
+const payviox = new Payviox('your_api_token');
+
+async function processPayment() {
+  try {
+    // Create session with automatic redirect
+    await payviox.createSession({
+      amount: 5000, // 50.00 USD in cents
+      currency: 'USD',
+      customer: 'customer_abc123',
+      description: 'Monthly subscription',
+      paymentMethodId: 'pm_card',
+      order_id: 'order_2024_001',
+      items: [
+        {
+          name: 'Pro Plan - Monthly',
+          quantity: 1,
+          price: 5000
+        }
+      ]
+    }, {
+      redirect: true // Enable automatic redirect
+    });
+    
+    // The following code will not execute as the user is redirected
+  } catch (error) {
+    console.error('Payment error:', error);
+    // Handle error before redirect
+  }
+}
+```
+
+## Session parameters
+
+The `createSession()` method accepts two parameter objects:
+
+### Payment session details (SessionParameters)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | `number` | ✅ Required | Payment amount in the smallest currency unit (cents for USD). Example: `5000` = $50.00. Minimum is typically 100 ($1.00). |
+| `currency` | `string` | ✅ Required | Three-letter ISO currency code. Example: `'USD'`, `'EUR'`, `'GBP'` |
+| `customer` | `string` | ✅ Required | Customer identifier. Can be an email, customer ID, or any unique identifier. Example: `'customer_abc123'` or `'user@example.com'` |
+| `description` | `string` | ✅ Required | Human-readable description of the payment. Example: `'Premium subscription - Monthly'` |
+| `paymentMethodId` | `string` | ✅ Required | Payment method identifier. Use `'pm_card'` for card payments. Get available methods with `getPaymentsMethods()`. |
+| `order_id` | `string` | ✅ Required | Unique identifier for this order. Must be unique across all your transactions. Example: `'order_2024_001'` or `'order_' + Date.now()` |
+| `items` | `array` | ✅ Required | Array of items being purchased. Each item must contain: `name` (string), `quantity` (number), `price` (number in cents). |
+
+### Integration options (PayvioxParameters)
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `redirect` | `boolean` | ⚪ Optional | `false` | If `true`, automatically redirects to the payment page. Cannot be used with `iframeMode: true`. |
+| `iframeMode` | `boolean` | ⚪ Optional | `false` | If `true`, embeds the payment form in an iframe. Requires `iframeConfig` to be set. Cannot be used with `redirect: true`. |
+| `iframeConfig` | `object` | ⚪ Optional | - | Configuration for iframe mode. Required when `iframeMode` is `true`. See iframe integration documentation for details. |
+
+### Item object structure
+
+Each item in the `items` array must have:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | `string` | ✅ Required | Name or description of the item |
+| `quantity` | `number` | ✅ Required | Quantity being purchased. Must be a positive integer. |
+| `price` | `number` | ✅ Required | Unit price in the smallest currency unit (cents). |
+
+### Return value
+
+The `createSession()` method returns a Promise that resolves to:
+- `void` when using `redirect: true` (page redirects before returning)
+- `string` (session ID) in all other cases
+
+```javascript
+// With redirect - returns void (page redirects immediately)
+await payviox.createSession(params, { redirect: true });
+
+// Without redirect - returns session ID
+const sessionId = await payviox.createSession(params);
+console.log('Session ID:', sessionId);
+```
+
+## Best practices
+
+<AccordionGroup>
+<Accordion title="Validate payment parameters">
+Always validate payment parameters on your server before creating sessions:
+
+```javascript
+// Client-side: Basic validation
+if (amount < 100) {
+  throw new Error('Minimum amount is $1.00');
+}
+
+// Server-side: Complete validation and session creation
+// (Recommended for security)
+```
+</Accordion>
+
+<Accordion title="Handle network errors gracefully">
+Implement retry logic for transient failures:
+
+```javascript
+async function createSessionWithRetry(params, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await payviox.createSession(params, { redirect: true });
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+}
+```
+</Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Iframe integration" icon="window" href="/sdk/integration/iframe">
+Embed payments in your page
+</Card>
+
+<Card title="Error handling" icon="triangle-exclamation" href="/sdk/error-handling">
+Handle errors gracefully
+</Card>
+
+<Card title="Testing" icon="flask" href="/sdk/testing">
+Test your integration
+</Card>
+</CardGroup>
+

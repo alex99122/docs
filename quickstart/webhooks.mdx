@@ -1,0 +1,140 @@
+---
+title: "Understanding Webhooks"
+description: "Learn how webhooks work for payment notifications"
+icon: "webhook"
+---
+
+## Understanding Webhooks
+
+Webhooks are **essential** for confirming payments. They provide real-time notifications when payment events occur.
+
+<Warning>
+**Important:** Always use webhooks to confirm payments. Don't rely solely on customer redirects, as customers may close their browser before returning to your site.
+</Warning>
+
+## How Webhooks Work
+
+<Steps>
+<Step title="Configure your webhook URL">
+Set up your webhook endpoint URL in the [Payviox Dashboard](https://dashboard.payviox.com)
+</Step>
+
+<Step title="Payviox sends a POST request">
+When payment events occur, Payviox sends a POST request to your configured URL
+</Step>
+
+<Step title="Your server receives the notification">
+Your server endpoint receives the webhook with complete payment details
+</Step>
+
+<Step title="Verify the signature">
+Always verify the webhook signature to ensure it's from Payviox and hasn't been tampered with
+</Step>
+
+<Step title="Process the payment">
+Fulfill the order, send confirmation emails, update your database, etc.
+</Step>
+
+<Step title="Return 200 OK">
+Respond with HTTP 200 status to acknowledge receipt of the webhook
+</Step>
+</Steps>
+
+## Webhook Payload Example
+
+```json
+{
+  "amount": 10000,
+  "currency": "USD",
+  "metadata": {
+    "integration_session_id": "sess_abc123xyz"
+  },
+  "type": "succeeded",
+  "provider": "stripe",
+  "order_id": "order_123456",
+  "items": [
+    {
+      "name": "Premium Subscription",
+      "quantity": 1,
+      "price": 10000
+    }
+  ],
+  "payment_method": "card"
+}
+```
+
+<Tip>
+The `type` field indicates the payment status: `succeeded`, `processing`, `canceled`, `requires_action`, etc.
+</Tip>
+
+## Payment States
+
+A payment can be in one of several states during its lifecycle:
+
+| State | Description | Action Required |
+|-------|-------------|-----------------|
+| `succeeded` | Payment completed successfully | Fulfill order |
+| `processing` | Payment is being processed | Wait for final status |
+| `canceled` | Payment was canceled | Cancel order |
+| `requires_action` | Customer action needed | Notify customer |
+| `requires_payment_method` | Payment method required | Request new method |
+| `requires_confirmation` | Confirmation needed | Confirm payment |
+
+## What Happens During Payment?
+
+<AccordionGroup>
+<Accordion title="1. Session Creation (Your Application)">
+Your application creates a payment session by calling Payviox with:
+- **Amount** (in smallest currency unit, e.g., cents)
+- **Currency** (USD, EUR, GBP, etc.)
+- **Order details** (customer ID, order ID, items)
+- **Payment method** (card, crypto, bank transfer, etc.)
+
+Payviox returns a session ID and secure payment URL.
+</Accordion>
+
+<Accordion title="2. Payment Processing (Payviox)">
+The customer is redirected to Payviox's secure payment page where:
+- Payment form is displayed with selected payment method
+- Customer enters payment details
+- Payment is processed through the appropriate provider (Stripe, PayPal, etc.)
+- Transaction is encrypted and secured
+</Accordion>
+
+<Accordion title="3. Webhook Notification (Payviox → Your Server)">
+Immediately after payment processing:
+- Payviox sends a webhook POST request to your configured URL
+- Includes payment status, amount, order ID, and all details
+- **This is your source of truth** for payment confirmation
+- Retries automatically if your server doesn't respond
+</Accordion>
+
+<Accordion title="4. Customer Redirect (Back to Your Site)">
+After payment:
+- Customer is redirected back to your website
+- URL includes session ID as parameter
+- You can show a confirmation page
+- **Note:** Always rely on webhooks, not just redirects
+</Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Webhook Integration Guide" icon="webhook" href="/webhooks/integration">
+Complete webhook implementation guide
+</Card>
+
+<Card title="Code Examples" icon="file-code" href="/quickstart/examples">
+See webhook handler examples
+</Card>
+
+<Card title="Best Practices" icon="shield-check" href="/quickstart/best-practices">
+Security and best practices
+</Card>
+
+<Card title="Dashboard" icon="gauge" href="https://dashboard.payviox.com">
+Configure your webhook URL
+</Card>
+</CardGroup>
+

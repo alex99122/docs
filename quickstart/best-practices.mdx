@@ -1,0 +1,287 @@
+---
+title: "Security & Best Practices"
+description: "Learn security best practices for payment integration"
+icon: "shield-check"
+---
+
+## Security & Best Practices
+
+Follow these best practices to ensure your payment integration is secure and reliable.
+
+## Essential Security Practices
+
+<CardGroup cols={2}>
+<Card title="Always verify webhooks" icon="shield-check">
+Verify the signature on every webhook to ensure it's from Payviox and hasn't been tampered with.
+</Card>
+
+<Card title="Use HTTPS" icon="lock">
+Always use HTTPS for your webhook endpoint to ensure data is encrypted in transit.
+</Card>
+
+<Card title="Handle idempotency" icon="repeat">
+Be prepared to receive the same webhook multiple times. Use order_id and session_id to prevent duplicate processing.
+</Card>
+
+<Card title="Respond quickly" icon="bolt">
+Return 200 OK within 30 seconds. Process webhooks asynchronously if needed.
+</Card>
+</CardGroup>
+
+## Webhook Security
+
+<Warning>
+**Critical:** Never process webhooks without verifying the signature. This protects against malicious actors sending fake payment notifications.
+</Warning>
+
+### Signature Verification
+
+Always verify webhook signatures using HMAC SHA256:
+
+```php
+// PHP example
+$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_SIGNATURE'];
+$webhookToken = 'your_webhook_token';
+
+$computed = hash_hmac('sha256', $payload, $webhookToken);
+
+if (!hash_equals($computed, $signature)) {
+    http_response_code(401);
+    exit('Invalid signature');
+}
+```
+
+### Use Timing-Safe Comparison
+
+Always use timing-safe comparison functions:
+- PHP: `hash_equals()`
+- Node.js: `crypto.timingSafeEqual()`
+- Python: `hmac.compare_digest()`
+
+This prevents timing attacks.
+
+## Idempotency Handling
+
+Webhooks may be delivered more than once. Implement idempotency checks:
+
+```php
+// Check if already processed
+$sessionId = $data['metadata']['integration_session_id'];
+$orderId = $data['order_id'];
+
+$existingPayment = Payment::where('session_id', $sessionId)
+                          ->where('order_id', $orderId)
+                          ->first();
+
+if ($existingPayment && $existingPayment->status === 'completed') {
+    // Already processed - skip
+    return response()->json(['status' => 'already_processed'], 200);
+}
+
+// Process the payment
+// ...
+```
+
+## Asynchronous Processing
+
+For optimal performance, process webhooks asynchronously:
+
+```php
+// Laravel example with queued job
+public function handleWebhook(Request $request) {
+    // Verify signature...
+    
+    // Dispatch to queue
+    ProcessWebhook::dispatch($data);
+    
+    // Immediately return 200 OK
+    return response()->json(['status' => 'queued'], 200);
+}
+```
+
+<Tip>
+Responding quickly prevents webhook timeout and retry attempts.
+</Tip>
+
+## API Token Security
+
+<AccordionGroup>
+<Accordion title="Use environment variables">
+Never hardcode API tokens in your code:
+
+```javascript
+// ✅ Good
+const payviox = new Payviox(process.env.PAYVIOX_API_TOKEN);
+
+// ❌ Bad
+const payviox = new Payviox('pk_live_xxxxxxxxxxxxx');
+```
+</Accordion>
+
+<Accordion title="Separate test and production tokens">
+Use different tokens for different environments:
+
+```javascript
+const PAYVIOX_TOKEN = process.env.NODE_ENV === 'production'
+  ? process.env.PAYVIOX_LIVE_TOKEN
+  : process.env.PAYVIOX_TEST_TOKEN;
+```
+</Accordion>
+
+<Accordion title="Rotate tokens regularly">
+Change your API tokens periodically and immediately if compromised.
+</Accordion>
+
+<Accordion title="Never expose tokens client-side">
+For production, use tokens only on your server, never in frontend code.
+</Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+Implement proper error handling in your integration:
+
+```javascript
+async function initiatePayment() {
+  try {
+    await payviox.createSession({
+      amount: 1000,
+      currency: 'USD',
+      // ... other params
+    }, {
+      redirect: true
+    });
+  } catch (error) {
+    // Log error for debugging
+    console.error('Payment error:', error);
+    
+    // Show user-friendly message
+    if (error.status === 401) {
+      alert('Configuration error. Please contact support.');
+    } else if (error.status === 400) {
+      alert('Invalid payment details. Please check and try again.');
+    } else {
+      alert('Payment failed. Please try again later.');
+    }
+  }
+}
+```
+
+## Logging and Monitoring
+
+<CardGroup cols={2}>
+<Card title="Log all webhooks" icon="file-lines">
+Keep detailed logs of all webhook events with timestamps for debugging and audit trails.
+</Card>
+
+<Card title="Monitor success rates" icon="chart-line">
+Track payment success and failure rates to identify issues early.
+</Card>
+
+<Card title="Set up alerts" icon="bell">
+Configure alerts for high failure rates or webhook delivery issues.
+</Card>
+
+<Card title="Review dashboard regularly" icon="gauge">
+Check your Payviox dashboard for payment trends and anomalies.
+</Card>
+</CardGroup>
+
+## Testing Checklist
+
+<Checklist>
+  <Check>Test with test API tokens before going live</Check>
+  <Check>Verify webhook signature validation works</Check>
+  <Check>Test idempotency handling (duplicate webhooks)</Check>
+  <Check>Test all payment states (success, decline, etc.)</Check>
+  <Check>Verify HTTPS is enabled on webhook endpoint</Check>
+  <Check>Test webhook retry mechanism</Check>
+  <Check>Verify error handling for network failures</Check>
+  <Check>Test with different payment methods</Check>
+  <Check>Check logging captures all events</Check>
+  <Check>Verify order fulfillment process works</Check>
+</Checklist>
+
+## Production Checklist
+
+<Checklist>
+  <Check>Switch to live API tokens</Check>
+  <Check>Verify webhook URL is correct and accessible</Check>
+  <Check>HTTPS is enabled on all endpoints</Check>
+  <Check>API tokens stored in environment variables</Check>
+  <Check>Webhook signature verification is active</Check>
+  <Check>Idempotency checks implemented</Check>
+  <Check>Error logging configured</Check>
+  <Check>Monitoring and alerts set up</Check>
+  <Check>Tested on production environment</Check>
+  <Check>Team knows how to handle payment issues</Check>
+</Checklist>
+
+## Common Issues and Solutions
+
+<AccordionGroup>
+<Accordion title="Webhook not receiving notifications">
+**Possible causes:**
+- Incorrect webhook URL in dashboard
+- Firewall blocking Payviox IP addresses
+- Server not responding within 30 seconds
+
+**Solution:** 
+- Verify webhook URL in dashboard
+- Check server logs for errors
+- Ensure endpoint returns 200 OK quickly
+</Accordion>
+
+<Accordion title="Signature verification failing">
+**Possible causes:**
+- Using wrong webhook token
+- Modifying request body before verification
+- Incorrect HMAC algorithm
+
+**Solution:** 
+- Verify webhook token from dashboard
+- Always verify against raw request body
+- Use HMAC SHA256 algorithm
+</Accordion>
+
+<Accordion title="Duplicate order processing">
+**Possible causes:**
+- Not implementing idempotency checks
+- Slow response times causing retries
+
+**Solution:** 
+- Implement idempotency using session_id and order_id
+- Return 200 OK immediately
+- Process asynchronously if needed
+</Accordion>
+
+<Accordion title="Payment session creation fails">
+**Possible causes:**
+- Invalid API token
+- Missing required fields
+- Invalid payment method ID
+
+**Solution:** 
+- Verify API token is correct
+- Check all required fields are provided
+- Ensure payment method exists and is active
+</Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+<CardGroup cols={3}>
+<Card title="Documentation" icon="book">
+Browse our complete documentation
+</Card>
+
+<Card title="Support" icon="life-ring">
+Email us at [support@payviox.com](mailto:support@payviox.com)
+</Card>
+
+<Card title="Dashboard" icon="gauge">
+[dashboard.payviox.com](https://dashboard.payviox.com)
+</Card>
+</CardGroup>
+

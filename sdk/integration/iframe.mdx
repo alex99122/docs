@@ -1,0 +1,214 @@
+---
+title: "Iframe integration"
+description: "Embed the payment flow directly into your website using an iframe"
+icon: "window"
+---
+
+## Overview
+
+Iframe mode allows you to embed the Payviox payment flow directly into your website, providing a seamless user experience without redirecting customers away from your page.
+
+<Warning>
+**Domain whitelisting required**: Your domain must be whitelisted in your Payviox dashboard settings to use iframe mode.
+</Warning>
+
+## How it works
+
+<Steps>
+<Step title="Create payment session">
+Your application creates a payment session with iframe mode enabled.
+</Step>
+
+<Step title="Embed iframe">
+The SDK automatically creates and embeds an iframe in your specified target element.
+</Step>
+
+<Step title="Customer completes payment">
+Customer interacts with the payment form inside the iframe without leaving your page.
+</Step>
+
+<Step title="Handle completion">
+Listen for completion events via postMessage API to handle successful payments.
+</Step>
+</Steps>
+
+## Basic implementation
+
+### Minimal iframe integration
+
+The simplest iframe integration requires just a target container:
+
+```javascript
+const payviox = new Payviox('your_api_token');
+
+// Create session with iframe mode
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'customer_abc123',
+  description: 'Order #12345',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_12345',
+  items: [
+    {
+      name: 'Product A',
+      quantity: 1,
+      price: 5000
+    }
+  ]
+}, {
+  iframeMode: true,
+  iframeConfig: {
+    iframeTarget: document.getElementById('payment-container'),
+    width: '100%',
+    height: '500px'
+  }
+});
+```
+
+<Check>
+The payment form will be loaded directly inside the specified container element.
+</Check>
+
+## Configuration options
+
+### Iframe configuration parameters
+
+<ParamField body="iframeMode" type="boolean" required>
+Enable iframe integration mode. Must be set to `true`.
+</ParamField>
+
+<ParamField body="iframeConfig" type="object" required>
+Configuration object for iframe behavior and appearance.
+
+<Expandable title="Iframe configuration properties">
+  <ParamField body="iframeTarget" type="HTMLElement" required>
+  DOM element where the iframe will be inserted. Must be a valid HTML element.
+  
+  ```javascript
+  iframeTarget: document.getElementById('payment-container')
+  ```
+  </ParamField>
+  
+  <ParamField body="width" type="string" default="100%">
+  Width of the iframe. Can be any valid CSS width value.
+  
+  ```javascript
+  width: '100%'  // or '500px', '80vw', etc.
+  ```
+  </ParamField>
+  
+  <ParamField body="height" type="string" default="400px">
+  Height of the iframe. Can be any valid CSS height value.
+  
+  ```javascript
+  height: '600px'  // or '100vh', '80%', etc.
+  ```
+  </ParamField>
+  
+  <ParamField body="withoutBorder" type="boolean" default="false">
+  Remove the default iframe border for a seamless integration.
+  
+  ```javascript
+  withoutBorder: true
+  ```
+  </ParamField>
+  
+  <ParamField body="transparentBackground" type="boolean" default="false">
+  Make the iframe background transparent to match your page design.
+  
+  ```javascript
+  transparentBackground: true
+  ```
+  </ParamField>
+  
+  <ParamField body="style" type="string" default="">
+  Additional CSS styles to apply to the iframe.
+  
+  ```javascript
+  style: 'box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 12px;'
+  ```
+  </ParamField>
+</Expandable>
+</ParamField>
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Iframe not displaying">
+**Possible causes:**
+- Domain not whitelisted
+- Invalid iframe target element
+- Content Security Policy blocking iframe
+
+**Solution:**
+```javascript
+// Verify that target element exists
+const target = document.getElementById('payment-container');
+if (!target) {
+  console.error('Payment container not found');
+}
+
+// Check console for CSP errors
+// Add to your HTML if needed:
+// <meta http-equiv="Content-Security-Policy" 
+//       content="frame-src https://secure.payviox.com;">
+```
+</Accordion>
+
+<Accordion title="Iframe height not adjusting">
+**Solution**: Set a fixed minimum height or use viewport units:
+
+```javascript
+iframeConfig: {
+  height: '600px',  // or 'max(600px, 80vh)'
+  style: 'min-height: 500px;'
+}
+```
+</Accordion>
+
+<Accordion title="Messages not received">
+**Solution**: Ensure you're listening before creating the session:
+
+```javascript
+// First configure the listener
+window.addEventListener('message', handlePaymentMessage);
+
+// Then create the session
+await payviox.createSession(params, iframeConfig);
+```
+</Accordion>
+</AccordionGroup>
+
+## Best practices
+
+<Tip>
+**Recommended practices for iframe integration:**
+
+1. **Provide visual feedback**: Show loading states while the iframe loads
+2. **Handle errors gracefully**: Display user-friendly messages for errors
+3. **Mobile optimization**: Test on various screen sizes
+4. **Accessibility**: Ensure keyboard navigation works properly
+5. **Performance**: Initialize iframes only when needed (lazy loading)
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Error handling" icon="triangle-exclamation" href="/sdk/error-handling">
+Handle payment errors gracefully
+</Card>
+
+<Card title="Payment methods" icon="credit-card" href="/sdk/payment-methods">
+Discover available payment options
+</Card>
+
+<Card title="Testing" icon="flask" href="/sdk/testing">
+Test iframe integration
+</Card>
+
+<Card title="Webhooks" icon="webhook" href="/sdk/webhooks">
+Process server-side events
+</Card>
+</CardGroup>
+

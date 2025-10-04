@@ -1,0 +1,96 @@
+---
+title: "Overview"
+description: "Understand the technical flow of payment processing with Payviox"
+icon: "lightbulb"
+---
+
+## Welcome to Payviox
+
+Payviox provides a simple and flexible payment infrastructure. You can integrate payments in minutes by choosing between two integration methods, and automatically receive payment confirmations via webhooks.
+
+<Info>
+**New to Payviox?** This guide explains the complete payment flow from start to finish.
+</Info>
+
+## Payment Flow
+
+Here's how a typical payment works with Payviox:
+
+```mermaid
+sequenceDiagram
+    participant Customer
+    participant YourApp as Your Application
+    participant Payviox as Payviox API
+    participant PaymentPage as Secure Payment Page
+    participant Webhook as Your Webhook
+
+    Customer->>YourApp: Clicks "Pay Now"
+    YourApp->>Payviox: Create payment session
+    Payviox-->>YourApp: Returns session ID
+    
+    alt SDK Integration (Redirect)
+        YourApp->>PaymentPage: Redirect customer
+    else SDK Integration (Iframe)
+        YourApp->>PaymentPage: Open in iframe
+    else API Integration
+        YourApp->>PaymentPage: Send customer to URL
+    end
+    
+    Customer->>PaymentPage: Completes payment
+    PaymentPage->>Payviox: Process payment
+    
+    Payviox->>Webhook: Send payment confirmation
+    Webhook-->>Payviox: Return 200 OK
+    
+    PaymentPage->>YourApp: Redirect customer back
+    Customer->>YourApp: Sees confirmation page
+```
+
+## Step-by-Step Flow
+
+<Steps>
+<Step title="Customer initiates payment">
+Your customer clicks a "Pay Now" button or starts the checkout process on your website.
+</Step>
+
+<Step title="Create a payment session">
+Your application calls Payviox (via SDK or API) to create a payment session with order details, amount, currency, and items.
+</Step>
+
+<Step title="Redirect to secure payment page">
+The customer is redirected to Payviox's secure payment page (or it opens in an iframe) where they can complete their payment.
+</Step>
+
+<Step title="Customer completes payment">
+The customer enters their payment details and confirms the transaction on the secure Payviox page.
+</Step>
+
+<Step title="Webhook notification">
+**Immediately after payment**, Payviox sends a webhook to your server with the payment status and details. This is how you know the payment was successful.
+</Step>
+
+<Step title="Customer returns to your site">
+After payment, the customer is redirected back to your website where you can show them a confirmation page.
+</Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Choose Integration Method" icon="code" href="/quickstart/integration-methods">
+Compare SDK vs API integration
+</Card>
+
+<Card title="Understanding Webhooks" icon="webhook" href="/quickstart/webhooks">
+Learn about payment notifications
+</Card>
+
+<Card title="SDK Integration" icon="code" href="/sdk/introduction">
+Start with the JavaScript SDK
+</Card>
+
+<Card title="API Integration" icon="server" href="/api/introduction">
+Use the REST API
+</Card>
+</CardGroup>
+

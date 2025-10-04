@@ -1,0 +1,191 @@
+---
+title: "Installation"
+description: "Install and set up the Payviox JavaScript SDK in your project"
+icon: "download"
+---
+
+## Prerequisites
+
+<Info>
+**Requirements**:
+- Modern web browser with ES6 support
+- API token from your Payviox dashboard
+- Node.js 14+ (for npm installation)
+</Info>
+
+## Installation methods
+
+You can integrate the Payviox SDK using different methods depending on your project setup.
+
+<Tabs>
+<Tab title="CDN">
+Include the SDK directly in your HTML file using a CDN link.
+
+```html index.html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payviox Integration</title>
+</head>
+<body>
+  <!-- Your content -->
+  
+  <script src="https://cdn.payviox.com/sdk/payviox.js"></script>
+  <script>
+    // The SDK is now globally available
+    const payviox = new Payviox('your_api_token');
+  </script>
+</body>
+</html>
+```
+
+<Tip>
+Using the CDN is the fastest way to get started and automatically provides updates.
+</Tip>
+</Tab>
+
+<Tab title="NPM">
+Install the SDK as a package in your Node.js project.
+
+```bash
+npm install @payviox/sdk
+```
+
+Then import it in your JavaScript files:
+
+```javascript app.js
+import Payviox from '@payviox/sdk';
+
+const payviox = new Payviox('your_api_token');
+```
+</Tab>
+
+<Tab title="Download">
+Download the SDK file directly and include it in your project.
+
+1. Download `payviox.js` from the [releases page](https://github.com/payviox/sdk/releases)
+2. Place it in your project's `js` or `vendor` directory
+3. Include it in your HTML:
+
+```html
+<script src="/js/payviox.js"></script>
+```
+</Tab>
+</Tabs>
+
+## Get your API token
+
+To use the SDK, you need an API token from your Payviox dashboard.
+
+<Steps>
+<Step title="Log in to your dashboard">
+Navigate to [https://dashboard.payviox.com](https://dashboard.payviox.com) and sign in with your credentials.
+</Step>
+
+<Step title="Access API settings">
+Go to **Settings** > **API Keys** in the sidebar menu.
+</Step>
+
+<Step title="Create or copy token">
+Click **Create new API key** or copy an existing key.
+
+<Warning>
+Never expose your API token in client-side code in production. Use it only for server-side operations or in secure environments.
+</Warning>
+</Step>
+</Steps>
+
+## Initialize the SDK
+
+Once installed, initialize the SDK with your API token:
+
+<CodeGroup>
+```javascript Vanilla JavaScript
+const payviox = new Payviox('your_api_token');
+
+// Verify that initialization is successful
+console.log('Payviox SDK initialized');
+```
+
+```javascript ES6 Module
+import Payviox from '@payviox/sdk';
+
+const payviox = new Payviox('your_api_token');
+
+export default payviox;
+```
+
+```typescript TypeScript
+import Payviox from '@payviox/sdk';
+
+const payviox: Payviox = new Payviox('your_api_token');
+
+export default payviox;
+```
+</CodeGroup>
+
+## Verify installation
+
+Test your installation by fetching available payment methods:
+
+```javascript test.js
+const payviox = new Payviox('your_api_token');
+
+// Test the API connection
+payviox.getPaymentsMethods()
+  .then(methods => {
+    console.log('Available payment methods:', methods);
+  })
+  .catch(error => {
+    console.error('Installation error:', error);
+  });
+```
+
+<Check>
+If you see a list of payment methods in the console, your SDK is correctly installed and configured.
+</Check>
+
+## Environment configuration
+
+### Development vs Production
+
+Use different API tokens for development and production environments:
+
+```javascript config.js
+const PAYVIOX_TOKEN = process.env.NODE_ENV === 'production'
+  ? 'pk_live_xxxxxxxxxxxxx'
+  : 'pk_test_xxxxxxxxxxxxx';
+
+const payviox = new Payviox(PAYVIOX_TOKEN);
+```
+
+### Base URL configuration
+
+The SDK automatically uses the correct base URLs:
+- API endpoint: `https://api.payviox.com`
+- Secure redirect: `https://secure.payviox.com`
+
+<Note>
+These URLs are managed internally by the SDK and cannot be modified in standard configurations.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Quickstart" icon="rocket" href="/sdk/quickstart">
+Create your first payment session
+</Card>
+
+<Card title="Redirect integration" icon="arrow-up-right-from-square" href="/sdk/integration/redirect">
+Implement redirect mode
+</Card>
+
+<Card title="Iframe integration" icon="window" href="/sdk/integration/iframe">
+Implement iframe mode
+</Card>
+
+<Card title="API reference" icon="book" href="/sdk/api-reference/payviox-class">
+Explore all SDK methods
+</Card>
+</CardGroup>
+

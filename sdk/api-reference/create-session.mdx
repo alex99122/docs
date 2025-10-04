@@ -1,0 +1,306 @@
+---
+title: "createSession()"
+description: "Create a new payment session and optionally redirect or embed an iframe"
+icon: "plus-circle"
+---
+
+Creates a new payment session and optionally redirects or embeds an iframe.
+
+```typescript
+async createSession(
+  sessionParameters: SessionParameters,
+  parameters?: PayvioxParameters
+): Promise<void | string>
+```
+
+## Parameters
+
+<ParamField body="sessionParameters" type="SessionParameters" required>
+Object containing payment session details.
+
+<Expandable title="SessionParameters properties">
+  <ParamField body="amount" type="number" required>
+  Payment amount in the smallest currency unit (cents for USD).
+  
+  ```javascript
+  amount: 5000  // $50.00
+  ```
+  
+  <Note>
+  Minimum amount is typically 100 ($1.00). Check your currency's requirements.
+  </Note>
+  </ParamField>
+  
+  <ParamField body="currency" type="string" required>
+  Three-letter ISO currency code.
+  
+  ```javascript
+  currency: 'USD'  // or 'EUR', 'GBP', etc.
+  ```
+  </ParamField>
+  
+  <ParamField body="customer" type="string" required>
+  Customer identifier. Can be an email, customer ID, or any unique identifier.
+  
+  ```javascript
+  customer: 'customer_abc123'
+  // or
+  customer: 'user@example.com'
+  ```
+  </ParamField>
+  
+  <ParamField body="description" type="string" required>
+  Human-readable description of the payment.
+  
+  ```javascript
+  description: 'Premium subscription - Monthly'
+  ```
+  </ParamField>
+  
+  <ParamField body="paymentMethodId" type="string" required>
+  Payment method identifier. Use `'pm_card'` for card payments.
+  
+  ```javascript
+  paymentMethodId: 'pm_card'
+  ```
+  
+  <Tip>
+  Use `getPaymentsMethods()` to discover available payment method IDs.
+  </Tip>
+  </ParamField>
+  
+  <ParamField body="order_id" type="string" required>
+  Unique identifier for this order. Must be unique across all your transactions.
+  
+  ```javascript
+  order_id: 'order_2024_001'
+  // or generate dynamically
+  order_id: 'order_' + Date.now()
+  ```
+  </ParamField>
+  
+  <ParamField body="items" type="array" required>
+  Array of items being purchased.
+  
+  ```javascript
+  items: [
+    {
+      name: 'Product A',
+      quantity: 2,
+      price: 2500  // Prix unitaire en centimes
+    },
+    {
+      name: 'Product B',
+      quantity: 1,
+      price: 5000
+    }
+  ]
+  ```
+  
+  <Expandable title="Item properties">
+    <ParamField body="name" type="string" required>
+    Name or description of the item.
+    </ParamField>
+    
+    <ParamField body="quantity" type="number" required>
+    Quantity being purchased. Must be a positive integer.
+    </ParamField>
+    
+    <ParamField body="price" type="number" required>
+    Unit price in the smallest currency unit (cents).
+    </ParamField>
+  </Expandable>
+  </ParamField>
+</Expandable>
+</ParamField>
+
+<ParamField body="parameters" type="PayvioxParameters">
+Optional configuration for integration mode and behavior.
+
+<Expandable title="PayvioxParameters properties">
+  <ParamField body="redirect" type="boolean" default="false">
+  If `true`, automatically redirects to the payment page.
+  
+  ```javascript
+  { redirect: true }
+  ```
+  
+  <Note>
+  Cannot be used simultaneously with `iframeMode: true`.
+  </Note>
+  </ParamField>
+  
+  <ParamField body="iframeMode" type="boolean" default="false">
+  If `true`, embeds the payment form in an iframe.
+  
+  ```javascript
+  { iframeMode: true }
+  ```
+  
+  <Warning>
+  Requires `iframeConfig` to be set when enabled.
+  </Warning>
+  </ParamField>
+  
+  <ParamField body="iframeConfig" type="object">
+  Configuration for iframe mode. Required when `iframeMode` is `true`.
+  
+  <Expandable title="IframeConfig properties">
+    <ParamField body="iframeTarget" type="HTMLElement" required>
+    DOM element where the iframe will be inserted.
+    
+    ```javascript
+    iframeTarget: document.getElementById('payment-container')
+    ```
+    </ParamField>
+    
+    <ParamField body="width" type="string" default="100%">
+    Width of the iframe. Any valid CSS width value.
+    
+    ```javascript
+    width: '500px'  // or '100%', '80vw', etc.
+    ```
+    </ParamField>
+    
+    <ParamField body="height" type="string" default="400px">
+    Height of the iframe. Any valid CSS height value.
+    
+    ```javascript
+    height: '600px'  // or '100vh', '80%', etc.
+    ```
+    </ParamField>
+    
+    <ParamField body="withoutBorder" type="boolean" default="false">
+    Remove iframe border for seamless integration.
+    
+    ```javascript
+    withoutBorder: true
+    ```
+    </ParamField>
+    
+    <ParamField body="transparentBackground" type="boolean" default="false">
+    Make iframe background transparent.
+    
+    ```javascript
+    transparentBackground: true
+    ```
+    </ParamField>
+    
+    <ParamField body="style" type="string" default="">
+    Additional CSS styles to apply to the iframe.
+    
+    ```javascript
+    style: 'border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'
+    ```
+    </ParamField>
+  </Expandable>
+  </ParamField>
+</Expandable>
+</ParamField>
+
+## Return value
+
+<ResponseField name="return" type="Promise<void | string>">
+Returns a Promise that resolves to:
+- `void` when using `redirect: true` (page redirects before returning)
+- `string` (session ID) in all other cases
+
+```javascript
+// With redirect
+await payviox.createSession(params, { redirect: true });
+// Page redirects immediately
+
+// Without redirect
+const sessionId = await payviox.createSession(params);
+console.log('Session ID:', sessionId);
+```
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```javascript Redirect Mode
+const payviox = new Payviox('your_api_token');
+
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Premium Plan',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_' + Date.now(),
+  items: [
+    { name: 'Premium Plan', quantity: 1, price: 5000 }
+  ]
+}, {
+  redirect: true
+});
+```
+
+```javascript Iframe Mode
+const payviox = new Payviox('your_api_token');
+
+const sessionId = await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Premium Plan',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_' + Date.now(),
+  items: [
+    { name: 'Premium Plan', quantity: 1, price: 5000 }
+  ]
+}, {
+  iframeMode: true,
+  iframeConfig: {
+    iframeTarget: document.getElementById('payment-frame'),
+    width: '100%',
+    height: '600px',
+    withoutBorder: true,
+    transparentBackground: false,
+    style: ''
+  }
+});
+```
+
+```javascript Get Session ID
+const payviox = new Payviox('your_api_token');
+
+// Create session without automatic redirect
+const sessionId = await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Premium Plan',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_' + Date.now(),
+  items: [
+    { name: 'Premium Plan', quantity: 1, price: 5000 }
+  ]
+});
+
+// Perform additional actions
+console.log('Session created:', sessionId);
+
+// Redirect manually when ready
+payviox.openSession(sessionId);
+```
+</CodeGroup>
+
+## Error handling
+
+```javascript
+try {
+  const sessionId = await payviox.createSession(sessionParams);
+  console.log('Success:', sessionId);
+} catch (error) {
+  if (error.message.includes('Unauthorized')) {
+    console.error('Invalid API token');
+  } else if (error.message.includes('Bad request')) {
+    console.error('Invalid parameters:', error.message);
+  } else {
+    console.error('Payment error:', error.message);
+  }
+}
+```
+

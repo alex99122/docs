@@ -1,0 +1,50 @@
+---
+title: "openSession()"
+description: "Manually redirect the user to the payment page"
+icon: "arrow-up-right-from-square"
+---
+
+Manually redirects the user to the payment page for a given session ID.
+
+```typescript
+openSession(sessionId: string): void
+```
+
+## Parameters
+
+<ParamField path="sessionId" type="string" required>
+The session ID returned from `createSession()`.
+
+```javascript
+const sessionId = 'ses_abc123...';
+payviox.openSession(sessionId);
+```
+</ParamField>
+
+## Examples
+
+```javascript
+const payviox = new Payviox('your_api_token');
+
+// Create a session
+const sessionId = await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Order payment',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_123',
+  items: [{ name: 'Product', quantity: 1, price: 5000 }]
+});
+
+// Perform other actions...
+console.log('Session ready:', sessionId);
+
+// Redirect when ready
+payviox.openSession(sessionId);
+```
+
+<Tip>
+Use this method when you need to perform actions between session creation and redirection.
+</Tip>
+

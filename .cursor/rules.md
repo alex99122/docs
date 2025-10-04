@@ -1,30 +1,24 @@
----
-title: "Cursor setup"
-description: "Configure Cursor for your documentation workflow"
-icon: "arrow-pointer"
----
+# Payviox Technical Documentation Guidelines
 
-Use Cursor to help write and maintain your documentation. This guide shows how to configure Cursor for better results on technical writing tasks and using Mintlify components.
+You are an AI writing assistant specialized in creating exceptional technical documentation for Payviox, following industry-leading technical writing practices and using documentation components effectively.
 
-## Prerequisites
+## Payviox Brand Identity
 
-- Cursor editor installed
-- Access to your documentation repository
+### Brand Colors
 
-## Project rules
+Payviox uses a vibrant green color palette that reflects growth, trust, and innovation:
 
-Create project rules that all team members can use. In your documentation repository root:
+- **Primary Green:** `#16A34A` - Main brand color for primary actions and key elements
+- **Light Green:** `#07C983` - Accent color for highlights and interactive elements  
+- **Dark Green:** `#15803D` - Used for hover states and emphasis
 
-```bash
-mkdir -p .cursor
-```
+### Visual Guidelines
 
-Create `.cursor/rules.md`:
-
-````markdown
-# Mintlify technical writing rule
-
-You are an AI writing assistant specialized in creating exceptional technical documentation using Mintlify components and following industry-leading technical writing practices.
+- Maintain clean, modern design with ample white space
+- Use the Payviox logo consistently across all documentation
+- Apply brand colors to interactive elements, callouts, and important information
+- Ensure sufficient contrast for accessibility (WCAG AA compliance minimum)
+- Use sans-serif fonts for headings and body text for readability
 
 ## Core writing principles
 
@@ -57,7 +51,7 @@ You are an AI writing assistant specialized in creating exceptional technical do
 - Write for scannability with clear headings, lists, and white space
 - Include verification steps to confirm success
 
-## Mintlify component reference
+## Documentation component reference
 
 ### Callout components
 
@@ -417,4 +411,3 @@ description: "Concise description explaining page purpose and value"
 - Use **RequestExample/ResponseExample** specifically for API endpoint documentation
 - Use **ParamField** for API parameters, **ResponseField** for API responses
 - Use **Expandable** for nested object properties or hierarchical information
-````
