@@ -1,0 +1,143 @@
+---
+title: "Payment Methods"
+description: "Understanding and using payment method identifiers"
+icon: "credit-card"
+---
+
+## Overview
+
+The `paymentMethodId` parameter allows you to specify which payment method should be used for a transaction. This gives you control over the payment experience and enables features like forcing specific payment methods, building custom selectors, or pre-selecting based on user preferences.
+
+<Tip>
+The `paymentMethodId` is required when creating a payment session. Use `getPaymentsMethods()` to retrieve available payment method IDs.
+</Tip>
+
+## How it works
+
+<Steps>
+<Step title="Retrieve available payment methods">
+Use `getPaymentsMethods()` to fetch all available payment methods for your account.
+</Step>
+
+<Step title="Select a payment method">
+Choose the appropriate payment method based on your business logic (currency, country, user preference, etc.).
+</Step>
+
+<Step title="Use the payment method ID">
+Pass the `id` property of the selected payment method as the `paymentMethodId` parameter in `createSession()`.
+</Step>
+
+<Step title="Payment is processed">
+The customer will be directed to pay using the specified payment method.
+</Step>
+</Steps>
+
+## Implementation
+
+### Example with payment method selection
+
+```javascript
+const payviox = new Payviox('your_api_token');
+
+async function processPayment() {
+  try {
+    // Step 1: Get available payment methods
+    const methods = await payviox.getPaymentsMethods({
+      currencies: 'USD'
+    });
+
+    // Step 2: Select a payment method (e.g., prefer card payments)
+    let selectedMethod = methods.find(m => m.type === 'card');
+    
+    // Fallback to first available method if card not available
+    if (!selectedMethod && methods.length > 0) {
+      selectedMethod = methods[0];
+    }
+
+    if (!selectedMethod) {
+      throw new Error('No payment methods available');
+    }
+
+    // Step 3: Create session with the payment method ID
+    await payviox.createSession({
+      amount: 5000,
+      currency: 'USD',
+      customer: 'user@example.com',
+      description: 'Order payment',
+      paymentMethodId: selectedMethod.id, // Use the payment method ID
+      order_id: 'order_' + Date.now(),
+      items: [
+        { name: 'Product', quantity: 1, price: 5000 }
+      ]
+    }, {
+      redirect: true
+    });
+
+  } catch (error) {
+    console.error('Payment error:', error.message);
+  }
+}
+```
+
+## Payment method object structure
+
+When you call `getPaymentsMethods()`, each payment method object contains the following properties:
+
+| Property | Type | Description | Example |
+|----------|------|-------------|---------|
+| `id` | `string` | Unique identifier used as `paymentMethodId` in `createSession()` | `'pm_card'`, `'pm_bank_transfer'` |
+| `name` | `string` | Human-readable name to display to users | `'Credit Card'`, `'Bank Transfer'` |
+| `type` | `string` | Payment type category | `'card'`, `'bank_transfer'`, `'wallet'` |
+| `currencies` | `string[]` | List of supported currency codes (ISO 4217) | `['USD', 'EUR', 'GBP']` |
+| `countries` | `string[]` | List of supported country codes (ISO 3166-1 alpha-2) | `['US', 'FR', 'DE']` |
+
+## Common use cases
+
+| Use Case | Description | Implementation |
+|----------|-------------|----------------|
+| **Force specific payment type** | Only allow card payments, bank transfers, etc. | Filter `methods` array by `type` property: `methods.find(m => m.type === 'card')` |
+| **Filter by currency** | Show only payment methods supporting a specific currency | Use `getPaymentsMethods({ currencies: 'USD' })` or filter by `currencies` array |
+| **Filter by country** | Show only payment methods available in customer's country | Use `getPaymentsMethods({ countries: 'FR' })` or filter by `countries` array |
+| **Custom payment selector** | Build a UI to let users choose their payment method | Loop through `methods` array and display each `name` with a selector button |
+| **Save user preference** | Remember and reuse customer's preferred payment method | Store the `id` from their previous choice and reuse it in subsequent transactions |
+| **Multi-currency support** | Dynamically load payment methods based on selected currency | Call `getPaymentsMethods()` with different `currencies` parameter when currency changes |
+
+## Filtering options
+
+The `getPaymentsMethods()` method accepts optional filters:
+
+| Filter | Type | Description | Example |
+|--------|------|-------------|---------|
+| `currencies` | `string \| string[]` | Filter by one or multiple currency codes | `'USD'` or `['USD', 'EUR']` |
+| `countries` | `string \| string[]` | Filter by one or multiple country codes | `'FR'` or `['FR', 'DE', 'ES']` |
+
+**Example usage:**
+
+```javascript
+// Single currency
+const usdMethods = await payviox.getPaymentsMethods({ currencies: 'USD' });
+
+// Multiple currencies
+const euroMethods = await payviox.getPaymentsMethods({ 
+  currencies: ['EUR', 'GBP'] 
+});
+
+// Currency and country
+const frenchMethods = await payviox.getPaymentsMethods({ 
+  currencies: 'EUR',
+  countries: 'FR'
+});
+```
+
+## Related resources
+
+<CardGroup cols={2}>
+<Card title="getPaymentsMethods()" icon="list" href="/sdk/api-reference/get-payments-methods">
+View full API reference
+</Card>
+
+<Card title="createSession()" icon="plus-circle" href="/sdk/api-reference/create-session">
+Create payment sessions
+</Card>
+</CardGroup>
+

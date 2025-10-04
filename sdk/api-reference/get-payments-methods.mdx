@@ -1,0 +1,120 @@
+---
+title: "getPaymentsMethods()"
+description: "Retrieve available payment methods"
+icon: "credit-card"
+---
+
+Retrieves available payment methods, optionally filtered by currency and country.
+
+```typescript
+async getPaymentsMethods(
+  parameters?: PaymentMethodsFilters
+): Promise<PaymentMethod[]>
+```
+
+## Parameters
+
+<ParamField body="parameters" type="PaymentMethodsFilters">
+Optional filters to narrow down payment methods.
+
+<Expandable title="PaymentMethodsFilters properties">
+  <ParamField body="currencies" type="string | string[]">
+  Filter by currency code(s).
+  
+  ```javascript
+  currencies: 'USD'
+  // or
+  currencies: ['USD', 'EUR', 'GBP']
+  ```
+  </ParamField>
+  
+  <ParamField body="countries" type="string | string[]">
+  Filter by country code(s) (ISO 3166-1 alpha-2).
+  
+  ```javascript
+  countries: 'FR'
+  // or
+  countries: ['FR', 'DE', 'ES']
+  ```
+  </ParamField>
+</Expandable>
+</ParamField>
+
+## Return value
+
+<ResponseField name="return" type="Promise<PaymentMethod[]>">
+Promise that resolves to an array of available payment methods.
+
+```typescript
+interface PaymentMethod {
+  id: string;
+  name: string;
+  type: string;
+  currencies: string[];
+  countries: string[];
+}
+```
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```javascript All Methods
+const payviox = new Payviox('your_api_token');
+
+const methods = await payviox.getPaymentsMethods();
+console.log('Available payment methods:', methods);
+```
+
+```javascript Filter by Currency
+const payviox = new Payviox('your_api_token');
+
+const methods = await payviox.getPaymentsMethods({
+  currencies: 'USD'
+});
+console.log('USD payment methods:', methods);
+```
+
+```javascript Multiple Filters
+const payviox = new Payviox('your_api_token');
+
+const methods = await payviox.getPaymentsMethods({
+  currencies: ['USD', 'EUR'],
+  countries: ['FR', 'DE']
+});
+console.log('Filtered methods:', methods);
+```
+
+```javascript Display in UI
+const payviox = new Payviox('your_api_token');
+
+const methods = await payviox.getPaymentsMethods({
+  currencies: 'USD'
+});
+
+const container = document.getElementById('payment-methods');
+methods.forEach(method => {
+  container.innerHTML += `
+    <div class="payment-method">
+      <h3>${method.name}</h3>
+      <p>Type: ${method.type}</p>
+      <p>ID: ${method.id}</p>
+    </div>
+  `;
+});
+```
+</CodeGroup>
+
+## Error handling
+
+```javascript
+try {
+  const methods = await payviox.getPaymentsMethods();
+  if (methods.length === 0) {
+    console.warn('No payment methods available');
+  }
+} catch (error) {
+  console.error('Failed to fetch payment methods:', error);
+}
+```
+

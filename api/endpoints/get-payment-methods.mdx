@@ -1,0 +1,363 @@
+---
+title: 'Get Payment Methods'
+api: 'GET https://api.payviox.com/payments/methods'
+description: 'Retrieve available payment methods for your business'
+authMethod: 'bearer'
+---
+
+## Overview
+
+Returns a list of all available payment methods configured for your business, filtered by country and currency restrictions.
+
+<Note>
+  This endpoint returns only active payment methods that match the specified filters.
+</Note>
+
+## Authentication
+
+This endpoint requires API key authentication. See [Authentication](/api/authentication) for details.
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Query Parameters
+
+<ParamField query="countries" type="string">
+  Comma-separated list of ISO 3166-1 alpha-2 country codes to filter payment methods by availability.
+  
+  **Example:** `US,GB,FR`
+  
+  **Maximum:** 200 countries
+</ParamField>
+
+<ParamField query="currencies" type="string">
+  Comma-separated list of three-letter ISO currency codes to filter payment methods.
+  
+  **Example:** `USD,EUR,GBP`
+  
+  **Maximum:** 200 currencies
+</ParamField>
+
+<ParamField query="is_company" type="boolean">
+  Set to `true` to get payment methods for business customers with adjusted fees.
+  
+  **Default:** `false`
+</ParamField>
+
+## Response
+
+Returns an object where each key is a payment method ID and the value contains the payment method details.
+
+<ResponseField name="[payment_method_id]" type="object">
+  <Expandable title="Payment Method Object">
+    <ResponseField name="name" type="string">
+      Display name of the payment method
+    </ResponseField>
+    
+    <ResponseField name="image" type="string">
+      URL to the payment method logo/image
+    </ResponseField>
+    
+    <ResponseField name="countries" type="array">
+      Array of country codes where this payment method is available. If null or empty, available globally.
+    </ResponseField>
+    
+    <ResponseField name="currencies" type="array">
+      Array of currency codes supported by this payment method. If null or empty, all currencies are supported.
+    </ResponseField>
+    
+    <ResponseField name="fees" type="object">
+      Fee structure for this payment method
+      
+      <Expandable title="Fees Object">
+        <ResponseField name="static_fees" type="number">
+          Fixed fee in dollars (e.g., 0.30 = $0.30)
+        </ResponseField>
+        
+        <ResponseField name="percent_fees" type="number">
+          Percentage fee as a decimal (e.g., 0.029 = 2.9%)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/payments/methods?countries=US,GB&currencies=USD \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  countries: 'US,GB',
+  currencies: 'USD'
+});
+
+const response = await fetch(
+  `https://api.payviox.com/payments/methods?${params}`,
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_API_KEY'
+    }
+  }
+);
+
+const paymentMethods = await response.json();
+console.log(paymentMethods);
+```
+
+```python Python
+import requests
+
+url = 'https://api.payviox.com/payments/methods'
+headers = {
+    'Authorization': 'Bearer YOUR_API_KEY'
+}
+params = {
+    'countries': 'US,GB',
+    'currencies': 'USD'
+}
+
+response = requests.get(url, headers=headers, params=params)
+payment_methods = response.json()
+print(payment_methods)
+```
+
+```php PHP
+<?php
+
+$apiKey = 'YOUR_API_KEY';
+$params = http_build_query([
+    'countries' => 'US,GB',
+    'currencies' => 'USD'
+]);
+
+$url = 'https://api.payviox.com/payments/methods?' . $params;
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $apiKey
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$paymentMethods = json_decode($response, true);
+print_r($paymentMethods);
+```
+
+```ruby Ruby
+require 'net/http'
+require 'uri'
+require 'json'
+
+uri = URI('https://api.payviox.com/payments/methods')
+uri.query = URI.encode_www_form({
+  countries: 'US,GB',
+  currencies: 'USD'
+})
+
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Get.new(uri)
+request['Authorization'] = 'Bearer YOUR_API_KEY'
+
+response = http.request(request)
+payment_methods = JSON.parse(response.body)
+puts payment_methods
+```
+
+```go Go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    url := "https://api.payviox.com/payments/methods?countries=US,GB&currencies=USD"
+    
+    req, _ := http.NewRequest("GET", url, nil)
+    req.Header.Set("Authorization", "Bearer YOUR_API_KEY")
+    
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+    
+    var paymentMethods map[string]interface{}
+    json.NewDecoder(resp.Body).Decode(&paymentMethods)
+    fmt.Println(paymentMethods)
+}
+```
+
+</CodeGroup>
+
+## Example Response
+
+<ResponseExample>
+
+```json Success Response (200)
+{
+  "stripe_credit": {
+    "countries": null,
+    "currencies": null,
+    "fees": {
+      "static_fees": 0.30,
+      "percent_fees": 0.029
+    },
+    "name": "Credit Card (Stripe)",
+    "image": "https://cdn.payviox.com/images/stripe.png"
+  },
+  "nicepay_pix": {
+    "countries": ["BR"],
+    "currencies": ["BRL", "USD"],
+    "fees": {
+      "static_fees": 0,
+      "percent_fees": 0.015
+    },
+    "name": "PIX (Nicepay)",
+    "image": "https://cdn.payviox.com/images/pix.png"
+  },
+  "zen_usdt": {
+    "countries": null,
+    "currencies": ["USD"],
+    "fees": {
+      "static_fees": 0,
+      "percent_fees": 0.01
+    },
+    "name": "USDT (Zen)",
+    "image": "https://cdn.payviox.com/images/usdt.png"
+  },
+  "cryptocom_btc": {
+    "countries": null,
+    "currencies": ["USD"],
+    "fees": {
+      "static_fees": 0,
+      "percent_fees": 0.01
+    },
+    "name": "Bitcoin (Crypto.com)",
+    "image": "https://cdn.payviox.com/images/bitcoin.png"
+  }
+}
+```
+
+</ResponseExample>
+
+## Error Responses
+
+<ResponseExample>
+
+```json Unauthorized (401)
+{
+  "error": "Unauthorized"
+}
+```
+
+```json Invalid Parameters (400)
+{
+  "error": "Invalid country code",
+  "message": "Country code must be ISO 3166-1 alpha-2 format"
+}
+```
+
+</ResponseExample>
+
+## Understanding the Response
+
+### Global vs Regional Payment Methods
+
+- **Global methods** have `null` or empty arrays for `countries` and `currencies`
+- **Regional methods** specify which countries and currencies they support
+
+### Fee Structure
+
+Fees are calculated as:
+```
+Total Fee = static_fees + (amount × percent_fees)
+```
+
+**Example:** For a $100 payment with `static_fees: 0.30` and `percent_fees: 0.029`:
+```
+Total Fee = $0.30 + ($100 × 0.029) = $0.30 + $2.90 = $3.20
+```
+
+### Company vs Individual Fees
+
+When `is_company=true`, some payment methods may have adjusted fee structures for business customers.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Display Payment Options" icon="list">
+    Show available payment methods to your customers before they start checkout
+  </Card>
+  <Card title="Dynamic Pricing" icon="calculator">
+    Calculate and display fees for each payment method
+  </Card>
+  <Card title="Geographic Filtering" icon="globe">
+    Show only payment methods available in customer's country
+  </Card>
+  <Card title="Currency Support" icon="dollar-sign">
+    Filter methods based on your transaction currency
+  </Card>
+</CardGroup>
+
+## Filtering Logic
+
+<AccordionGroup>
+  <Accordion title="Country Filtering">
+    - If no countries parameter is provided, all payment methods are returned
+    - If countries are specified, only methods available in those countries are returned
+    - Methods with `null` countries are always included (global availability)
+  </Accordion>
+
+  <Accordion title="Currency Filtering">
+    - If no currencies parameter is provided, all payment methods are returned
+    - If currencies are specified, only methods supporting those currencies are returned
+    - Methods with `null` currencies are always included (all currencies supported)
+  </Accordion>
+
+  <Accordion title="Active Status">
+    - Only payment methods that are active in your business configuration are returned
+    - Methods must also have an active provider configuration
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<Warning>
+  **Cache Responsibly:** Payment methods and fees can change. Cache the response for a short period (recommended: 5-15 minutes) and refresh regularly.
+</Warning>
+
+<Tip>
+  **Show Relevant Methods:** Always filter by the customer's country and your transaction currency to show only relevant payment options.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Session"
+    icon="plus"
+    href="/api/endpoints/create-session"
+  >
+    Create a payment session with a specific payment method
+  </Card>
+  <Card
+    title="Configure Methods"
+    icon="gear"
+    href="https://dashboard.payviox.com/payments"
+  >
+    Enable or configure payment methods in your dashboard
+  </Card>
+</CardGroup>
+

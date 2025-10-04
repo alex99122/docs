@@ -1,0 +1,105 @@
+---
+title: "Payviox JavaScript SDK"
+description: "Integrate payment processing into your web application with the Payviox JavaScript SDK"
+icon: "code"
+---
+
+## Overview
+
+The Payviox JavaScript SDK provides a simple and secure way to integrate payment processing into your web applications. With support for both redirect and iframe integration modes, you can create seamless payment experiences for your customers.
+
+## Key features
+
+<CardGroup cols={2}>
+<Card title="Multiple integration modes" icon="window">
+Choose between redirect or iframe mode to match your application's user experience.
+</Card>
+
+<Card title="Secure payment sessions" icon="shield-check">
+Create encrypted payment sessions with comprehensive customer and order data.
+</Card>
+
+<Card title="Payment method discovery" icon="credit-card">
+Query available payment methods filtered by currency and country.
+</Card>
+
+<Card title="Error handling" icon="triangle-exclamation">
+Built-in error handling with detailed error messages for debugging.
+</Card>
+</CardGroup>
+
+## Quick example
+
+```javascript example.js
+// Initialize the SDK with your API token
+const payviox = new Payviox('your_api_token');
+
+// Create a payment session
+const sessionId = await payviox.createSession({
+  amount: 1000,
+  currency: 'USD',
+  customer: 'customer_123',
+  description: 'Order #12345',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_12345',
+  items: [
+    {
+      name: 'Product A',
+      quantity: 2,
+      price: 500
+    }
+  ]
+}, {
+  redirect: true
+});
+```
+
+## Integration modes
+
+### Redirect mode
+
+Redirect your customers to a secure Payviox-hosted payment page. This is the simplest integration method and provides a fully managed payment experience.
+
+<Tip>
+Redirect mode is recommended for quick integrations and provides the highest level of PCI compliance.
+</Tip>
+
+### Iframe mode
+
+Embed the payment flow directly into your website using an iframe. This provides a more seamless user experience while maintaining security.
+
+<Warning>
+When using iframe mode, ensure your domain is whitelisted in your Payviox dashboard settings.
+</Warning>
+
+## Get started
+
+<CardGroup cols={2}>
+<Card title="Installation" icon="download" href="/sdk/installation">
+Install the SDK in your project
+</Card>
+
+<Card title="Quickstart guide" icon="rocket" href="/sdk/quickstart">
+Complete your first integration in minutes
+</Card>
+
+<Card title="Redirect integration" icon="arrow-up-right-from-square" href="/sdk/integration/redirect">
+Implement redirect mode payment flow
+</Card>
+
+<Card title="Iframe integration" icon="window" href="/sdk/integration/iframe">
+Embed payments directly in your page
+</Card>
+</CardGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+<Card title="API reference" icon="book" href="/sdk/api-reference/payviox-class">
+Explore all available methods and options
+</Card>
+
+<Card title="Dashboard" icon="gauge" href="https://dashboard.payviox.com">
+Manage your account and view transactions
+</Card>
+</CardGroup>

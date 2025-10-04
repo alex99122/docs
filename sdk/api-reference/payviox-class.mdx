@@ -1,0 +1,118 @@
+---
+title: "Payviox Class"
+description: "Initialize and configure the Payviox SDK"
+icon: "brackets-curly"
+---
+
+## Overview
+
+The Payviox class is the main entry point for the Payviox SDK. It provides methods to create payment sessions, open payment pages, and retrieve available payment methods.
+
+## Constructor
+
+### `new Payviox(token)`
+
+Creates a new instance of the Payviox SDK.
+
+```javascript
+const payviox = new Payviox('your_api_token');
+```
+
+<Warning>
+Never expose your API token in client-side code in production environments. Consider creating sessions server-side and passing session IDs to the client.
+</Warning>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token` | `string` | ✅ Required | Your Payviox API token. Obtain this from your dashboard at [dashboard.payviox.com](https://dashboard.payviox.com). Use test tokens (`pk_test_...`) for development and live tokens (`pk_live_...`) for production. |
+
+## Examples
+
+<CodeGroup>
+```javascript JavaScript
+const payviox = new Payviox('pk_test_abc123...');
+
+// Now you can use the SDK methods
+await payviox.createSession({...});
+```
+
+```typescript TypeScript
+import Payviox from '@payviox/sdk';
+
+const payviox: Payviox = new Payviox('pk_test_abc123...');
+
+// Now you can use the SDK methods
+await payviox.createSession({...});
+```
+</CodeGroup>
+
+## Environment-specific tokens
+
+It's recommended to use different tokens for different environments:
+
+```javascript
+const token = process.env.NODE_ENV === 'production'
+  ? process.env.PAYVIOX_LIVE_TOKEN
+  : process.env.PAYVIOX_TEST_TOKEN;
+
+const payviox = new Payviox(token);
+```
+
+## Available methods
+
+Once instantiated, the Payviox class provides the following methods:
+
+| Method | Description | Link |
+|--------|-------------|------|
+| `createSession()` | Create a new payment session and optionally redirect or embed an iframe | [View details](/sdk/api-reference/create-session) |
+| `openSession()` | Manually redirect the user to the payment page | [View details](/sdk/api-reference/open-session) |
+| `openIframe()` | Manually open an iframe for a payment session | [View details](/sdk/api-reference/open-iframe) |
+| `getPaymentsMethods()` | Retrieve available payment methods | [View details](/sdk/api-reference/get-payments-methods) |
+
+## Quick start
+
+```javascript
+// 1. Initialize the SDK
+const payviox = new Payviox('pk_test_abc123...');
+
+// 2. Get available payment methods
+const methods = await payviox.getPaymentsMethods();
+
+// 3. Create a payment session
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Order payment',
+  paymentMethodId: methods[0].id,
+  order_id: 'order_' + Date.now(),
+  items: [
+    { name: 'Product', quantity: 1, price: 5000 }
+  ]
+}, {
+  redirect: true
+});
+```
+
+## Related resources
+
+<CardGroup cols={2}>
+<Card title="Installation" icon="download" href="/sdk/installation">
+Install the Payviox SDK
+</Card>
+
+<Card title="Quickstart" icon="rocket" href="/sdk/quickstart">
+Get started quickly
+</Card>
+
+<Card title="createSession()" icon="plus-circle" href="/sdk/api-reference/create-session">
+Create payment sessions
+</Card>
+
+<Card title="Payment Methods" icon="credit-card" href="/sdk/api-reference/payment-methods">
+Understand payment methods
+</Card>
+</CardGroup>
+
