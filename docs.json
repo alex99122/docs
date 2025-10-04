@@ -7,39 +7,14 @@
     "light": "#FFF",
     "dark": "#0D0D0D"
   },
-  "background": {
-    "decoration": "gradient",
-    "color": {
-      "light": "#F0F0F0",
-      "dark": "#000"
-    }
-  },
   "favicon": "/favicon.svg",
-  "tabs": [
-    {
-      "name": "Quickstart",
-      "url": "quickstart"
-    },
-    {
-      "name": "SDK Integration",
-      "url": "sdk"
-    },
-    {
-      "name": "API Integration",
-      "url": "api"
-    },
-    {
-      "name": "Webhook",
-      "url": "webhook"
-    }
-  ],
   "navigation": {
     "tabs": [
       {
         "tab": "Quickstart",
-        "pages": [
+        "groups": [
           {
-            "group": "Getting Started",
+            "group": "Quickstart",
             "pages": [
               "quickstart/overview",
               "quickstart/integration-methods",
@@ -52,51 +27,46 @@
       },
       {
         "tab": "SDK Integration",
-        "pages": [
+        "groups": [
           {
-            "group": "Getting started",
+            "group": "SDK - Getting Started",
             "pages": [
               "sdk/introduction",
               "sdk/installation"
             ]
           },
           {
-            "group": "Integration",
+            "group": "SDK - Integration",
             "pages": [
               "sdk/integration/redirect",
               "sdk/integration/iframe"
             ]
           },
           {
-            "group": "API Reference",
+            "group": "SDK - API Reference",
             "pages": [
               "sdk/api-reference/payviox-class",
               "sdk/api-reference/payment-methods",
-              {
-                "group": "Methods",
-                "pages": [
-                  "sdk/api-reference/create-session",
-                  "sdk/api-reference/open-session",
-                  "sdk/api-reference/open-iframe",
-                  "sdk/api-reference/get-payments-methods"
-                ]
-              }
+              "sdk/api-reference/create-session",
+              "sdk/api-reference/open-session",
+              "sdk/api-reference/open-iframe",
+              "sdk/api-reference/get-payments-methods"
             ]
           }
         ]
       },
       {
         "tab": "API Integration",
-        "pages": [
+        "groups": [
           {
-            "group": "REST API",
+            "group": "API - Getting Started",
             "pages": [
               "api/introduction",
               "api/authentication"
             ]
           },
           {
-            "group": "Endpoints",
+            "group": "API - Endpoints",
             "pages": [
               "api/endpoints/create-session",
               "api/endpoints/get-payment-methods"
@@ -105,8 +75,8 @@
         ]
       },
       {
-        "tab": "Webhook",
-        "pages": [
+        "tab": "Webhooks",
+        "groups": [
           {
             "group": "Webhook Integration",
             "pages": [
@@ -121,6 +91,20 @@
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "mdx": {
+      "server": "https://api.payviox.com",
+      "auth": {
+        "method": "bearer"
+      }
+    }
+  },
+  "background": {
+    "decoration": "gradient"
+  },
   "navbar": {
     "links": [
       {
@@ -133,29 +117,6 @@
       "label": "Dashboard",
       "href": "https://dashboard.payviox.com"
     }
-  },
-  "api": {
-    "baseUrl": "https://api.payviox.com",
-    "auth": {
-      "method": "bearer",
-      "name": "Authorization",
-      "inputPrefix": "Bearer "
-    },
-    "playground": {
-      "mode": "show"
-    }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
