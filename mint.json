@@ -15,6 +15,9 @@
       "to": "#0D0D0D"
     }
   },
+  "modeToggle": {
+    "default": "dark"
+  },
   "topbarLinks": [
     {
       "name": "Support",
@@ -23,7 +26,7 @@
   ],
   "topbarCtaButton": {
     "name": "Dashboard",
-    "url": "https://dashboard.payviox.com"
+    "url": "https://dash.payviox.com"
   },
   "tabs": [
     {
