@@ -42,6 +42,10 @@
       "url": "api"
     },
     {
+      "name": "API Payout",
+      "url": "api/payout"
+    },
+    {
       "name": "Webhooks",
       "url": "webhooks"
     }
@@ -100,6 +104,19 @@
       "group": "Webhook Integration",
       "pages": [
         "webhooks/integration"
+      ]
+    },
+    {
+      "group": "API Payout - Getting Started",
+      "pages": [
+        "api/payout/introduction",
+        "api/payout/authentication"
+      ]
+    },
+    {
+      "group": "API Payout - Endpoints",
+      "pages": [
+        "api/payout/create-payout-user"
       ]
     }
   ],
