@@ -75,6 +75,24 @@
         ]
       },
       {
+        "tab": "API Payout",
+        "groups": [
+          {
+            "group": "API Payout - Getting Started",
+            "pages": [
+              "api/payout/introduction",
+              "api/payout/authentication"
+            ]
+          },
+          {
+            "group": "API Payout - Endpoints",
+            "pages": [
+              "api/payout/create-payout-user"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Webhooks",
         "groups": [
           {

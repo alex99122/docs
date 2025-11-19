@@ -1,0 +1,382 @@
+---
+title: 'Create Payout User'
+api: 'POST https://api.payviox.com/payout/create'
+description: 'Create or update a payout user and allocate balance'
+authMethod: 'bearer'
+---
+
+## Overview
+
+Creates a new payout user or adds funds to an existing payout user. The amount is automatically debited from your business payout balance and allocated to the user. This endpoint uses atomic operations to prevent race conditions and ensure data consistency.
+
+<Note>
+  Payouts must be enabled for your business in the dashboard settings before using this endpoint.
+</Note>
+
+<Warning>
+  This endpoint requires a secure API key. The operation debits your business payout balance atomically, so ensure you have sufficient funds before calling this endpoint.
+</Warning>
+
+## Authentication
+
+This endpoint requires API key authentication. See [Payout API Authentication](/api/payout/authentication) for details.
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Request Body
+
+<ParamField body="email" type="string" required>
+  The email address of the payout user
+  
+  **Format:** Valid email address
+  **Max length:** 255 characters
+</ParamField>
+
+<ParamField body="amount" type="integer" required>
+  The amount to allocate to the payout user in cents (e.g., 10000 = $100.00)
+  
+  **Minimum:** 1 cent
+  **Maximum:** 100,000,000 cents (equivalent to $1,000,000.00)
+</ParamField>
+
+## Response
+
+<ResponseField name="hash" type="string">
+  SHA256 HMAC hash generated for the payout user. This hash can be used to retrieve payout information later.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/payout/create \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{
+    "email": "user@example.com",
+    "amount": 10000
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.payviox.com/payout/create', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'user@example.com',
+    amount: 10000
+  })
+});
+
+const data = await response.json();
+console.log(data.hash);
+```
+
+```python Python
+import requests
+
+url = 'https://api.payviox.com/payout/create'
+headers = {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+}
+
+payload = {
+    'email': 'user@example.com',
+    'amount': 10000
+}
+
+response = requests.post(url, headers=headers, json=payload)
+data = response.json()
+print(data['hash'])
+```
+
+```php PHP
+<?php
+
+$apiKey = 'YOUR_API_KEY';
+$url = 'https://api.payviox.com/payout/create';
+
+$data = [
+    'email' => 'user@example.com',
+    'amount' => 10000
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $apiKey,
+    'Content-Type: application/json'
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$result = json_decode($response, true);
+echo $result['hash'];
+```
+
+```ruby Ruby
+require 'net/http'
+require 'json'
+
+uri = URI('https://api.payviox.com/payout/create')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(uri)
+request['Authorization'] = 'Bearer YOUR_API_KEY'
+request['Content-Type'] = 'application/json'
+
+request.body = {
+  email: 'user@example.com',
+  amount: 10000
+}.to_json
+
+response = http.request(request)
+result = JSON.parse(response.body)
+puts result['hash']
+```
+
+```go Go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    url := "https://api.payviox.com/payout/create"
+    
+    payload := map[string]interface{}{
+        "email":  "user@example.com",
+        "amount": 10000,
+    }
+    
+    jsonData, _ := json.Marshal(payload)
+    
+    req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+    req.Header.Set("Authorization", "Bearer YOUR_API_KEY")
+    req.Header.Set("Content-Type", "application/json")
+    
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+    
+    var result map[string]interface{}
+    json.NewDecoder(resp.Body).Decode(&result)
+    fmt.Println(result["hash"])
+}
+```
+
+</CodeGroup>
+
+## Example Response
+
+<ResponseExample>
+
+```json Success Response (201)
+{
+  "hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+}
+```
+
+</ResponseExample>
+
+## Error Responses
+
+<ResponseExample>
+
+```json Missing Required Fields (400)
+{
+  "email": [
+    "The email field is required."
+  ],
+  "amount": [
+    "The amount field is required."
+  ]
+}
+```
+
+```json Invalid Email Format (400)
+{
+  "email": [
+    "The email must be a valid email address."
+  ]
+}
+```
+
+```json Invalid Amount (400)
+{
+  "amount": [
+    "The amount must be at least 1."
+  ]
+}
+```
+
+```json Amount Too Large (400)
+{
+  "amount": [
+    "The amount may not be greater than 100000000."
+  ]
+}
+```
+
+```json Insufficient Balance (400)
+{
+  "error": "Failed to debit business balance (insufficient funds or concurrent modification)"
+}
+```
+
+```json Payouts Disabled (403)
+{
+  "error": "Payouts are currently disabled. Please enable them in Settings."
+}
+```
+
+```json Unauthorized (401)
+{
+  "error": "Unauthorized"
+}
+```
+
+```json Server Error (500)
+{
+  "error": "Failed to create payout user"
+}
+```
+
+</ResponseExample>
+
+## How It Works
+
+### Atomic Operations
+
+This endpoint uses MongoDB atomic operations to ensure data consistency:
+
+1. **Business Balance Debit**: The amount is atomically debited from your business `payout_balance`. If insufficient funds exist, the operation fails immediately.
+2. **User Creation/Update**: The payout user is created (if new) or updated (if existing) with the amount added to their balance.
+3. **Transaction History**: A history record is created to track the transaction.
+
+### User Creation vs Update
+
+- **New User**: If the email doesn't exist for your business, a new payout user is created with the specified amount.
+- **Existing User**: If the email already exists, the amount is added to their existing balance.
+
+### Hash Generation
+
+Each payout user receives a unique SHA256 HMAC hash based on their email address. This hash:
+- Remains consistent for the same email address
+- Can be used to retrieve payout information
+- Is generated server-side using a secure secret
+- Can be used for hash-based authentication (see [Authentication](/api/payout/authentication#hash-authentication))
+
+## Validation Rules
+
+<AccordionGroup>
+  <Accordion title="Email Validation">
+    - Must be a valid email format
+    - Maximum 255 characters
+    - Case-insensitive (duplicate emails are treated as the same user)
+  </Accordion>
+
+  <Accordion title="Amount Validation">
+    - Must be a positive integer
+    - Minimum: 1 cent
+    - Maximum: 100,000,000 cents ($1,000,000.00)
+    - Amount is specified in cents (smallest currency unit)
+  </Accordion>
+
+  <Accordion title="Business Balance">
+    - Your business must have sufficient `payout_balance` to cover the amount
+    - The balance check and debit are atomic (prevents race conditions)
+    - If balance is insufficient, the operation fails without creating the user
+  </Accordion>
+
+  <Accordion title="Payout Status">
+    - Payouts must be enabled for your business in dashboard settings
+    - If disabled, the endpoint returns a 403 error
+    - Check payout status before attempting to create users
+  </Accordion>
+</AccordionGroup>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Reward Distribution" icon="gift">
+    Distribute rewards or commissions to users based on their email address
+  </Card>
+  <Card title="Refund Processing" icon="rotate-left">
+    Process refunds by adding funds to user payout accounts
+  </Card>
+  <Card title="Affiliate Payments" icon="users">
+    Pay affiliates by creating payout users and allocating their earnings
+  </Card>
+  <Card title="Balance Management" icon="wallet">
+    Manage user balances by adding funds incrementally over time
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Tip>
+  **Check Balance First**: Before creating payout users, verify your business has sufficient `payout_balance` to avoid failed requests.
+</Tip>
+
+<Warning>
+  **Idempotency**: This endpoint is idempotent for existing users - calling it multiple times with the same email will add the amount each time. Ensure you don't accidentally duplicate allocations.
+</Warning>
+
+<Tip>
+  **Error Handling**: Always handle the `insufficient balance` error gracefully and inform users when funds are not available.
+</Tip>
+
+<Note>
+  **Concurrent Requests**: The endpoint uses atomic operations, so concurrent requests for the same user are safe. However, ensure your business balance can cover all concurrent allocations.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Payout Authentication"
+    icon="key"
+    href="/api/payout/authentication"
+  >
+    Learn about hash-based authentication for payout users
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="chart-line"
+    href="https://dashboard.payviox.com"
+  >
+    Monitor your payout balance and users in the dashboard
+  </Card>
+  <Card
+    title="Enable Payouts"
+    icon="toggle-on"
+    href="https://dashboard.payviox.com/settings"
+  >
+    Enable payouts in your business settings
+  </Card>
+  <Card
+    title="API Playground"
+    icon="flask"
+    href="/api/payout/authentication#using-the-api-playground"
+  >
+    Test API calls directly from your browser
+  </Card>
+</CardGroup>
+

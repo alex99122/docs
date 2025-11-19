@@ -1,0 +1,289 @@
+---
+title: 'Payout API Authentication'
+description: 'Learn how to authenticate Payout API requests'
+---
+
+## Overview
+
+The Payout API uses two different authentication methods depending on the operation:
+
+1. **API Key Authentication** (Bearer Token) - For business operations
+2. **Hash Authentication** - For user payout operations
+
+## API Key Authentication
+
+### When to Use
+
+API Key authentication is used for **business operations** such as:
+- Creating payout users
+- Adding funds to existing users
+- Managing payout balances
+- Viewing payout user information (for business accounts)
+
+### How It Works
+
+Include your API key in the `Authorization` header of each request:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+### Getting Your API Key
+
+<Steps>
+  <Step title="Log In to Dashboard">
+    Access your [Payviox Dashboard](https://dashboard.payviox.com)
+  </Step>
+  <Step title="Navigate to Developer Section">
+    Go to **Developer** > **API Keys**
+  </Step>
+  <Step title="Copy Your API Key">
+    Copy your production API key (keep it secure!)
+  </Step>
+</Steps>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/payout/create \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{
+    "email": "user@example.com",
+    "amount": 10000
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.payviox.com/payout/create', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'user@example.com',
+    amount: 10000
+  })
+});
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+}
+
+data = {
+    'email': 'user@example.com',
+    'amount': 10000
+}
+
+response = requests.post(
+    'https://api.payviox.com/payout/create',
+    headers=headers,
+    json=data
+)
+```
+
+</CodeGroup>
+
+## Hash Authentication
+
+### When to Use
+
+Hash authentication is used by **payout users** to access their funds and perform operations such as:
+- Viewing their payout balance
+- Making withdrawals (gift cards, crypto, etc.)
+- Accessing payout history
+
+### How It Works
+
+When you create a payout user, the API returns a unique SHA256 HMAC hash. This hash is used to authenticate the user's requests.
+
+### Using the Hash
+
+The hash can be provided in three ways (in order of preference):
+
+1. **Header** (Most Secure): `X-Payout-Hash: YOUR_HASH`
+2. **Request Body**: `{"payout_hash": "YOUR_HASH"}`
+3. **Query Parameter**: `?payout_hash=YOUR_HASH` (for backward compatibility)
+
+<Warning>
+  **Security Best Practice**: Always use the header method (`X-Payout-Hash`) when possible, as it's the most secure and doesn't expose the hash in URLs or request bodies.
+</Warning>
+
+### Example Request with Hash
+
+<CodeGroup>
+
+```bash cURL (Header Method - Recommended)
+curl https://api.payviox.com/payout/operations \
+  -H "X-Payout-Hash: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6" \
+  -H "Content-Type: application/json"
+```
+
+```bash cURL (Body Method)
+curl https://api.payviox.com/payout/operations \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{
+    "payout_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  }'
+```
+
+```bash cURL (Query Parameter - Legacy)
+curl "https://api.payviox.com/payout/operations?payout_hash=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+```
+
+```javascript JavaScript (Header Method - Recommended)
+const response = await fetch('https://api.payviox.com/payout/operations', {
+  headers: {
+    'X-Payout-Hash': 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+```python Python (Header Method - Recommended)
+import requests
+
+headers = {
+    'X-Payout-Hash': 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'https://api.payviox.com/payout/operations',
+    headers=headers
+)
+```
+
+</CodeGroup>
+
+## Hash Characteristics
+
+### Consistency
+
+- The hash is **deterministic**: the same email address always generates the same hash
+- The hash is **unique per business**: same email for different businesses will have different hashes
+- The hash **cannot be reverse-engineered**: you cannot determine the email from the hash
+
+### Security
+
+- Hash generation uses a server-side secret key that is never exposed
+- Hashes are validated against active payout users only
+- Expired or inactive users cannot use their hash
+
+## Error Responses
+
+### Missing Authentication
+
+```json
+{
+  "error": "Unauthorized",
+  "message": "Missing authorization header"
+}
+```
+
+### Invalid API Key
+
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid API key"
+}
+```
+
+### Invalid or Inactive Hash
+
+```json
+{
+  "error": "Unauthorized",
+  "message": "Payout hash not found or inactive"
+}
+```
+
+### Payouts Disabled
+
+```json
+{
+  "error": "Payouts are currently disabled. Please enable them in Settings."
+}
+```
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Store API Keys Securely" icon="lock">
+    Never commit API keys to version control. Use environment variables or secure secret management.
+  </Card>
+  <Card title="Use HTTPS Only" icon="shield">
+    Always make API requests over HTTPS to protect your credentials in transit.
+  </Card>
+  <Card title="Rotate Keys Regularly" icon="rotate">
+    Periodically regenerate your API keys for enhanced security.
+  </Card>
+  <Card title="Protect Hash Values" icon="key">
+    Treat payout hashes as sensitive credentials. Don't expose them in URLs or logs.
+  </Card>
+  <Card title="Use Header Authentication" icon="arrow-up">
+    Prefer header-based hash authentication over query parameters or body parameters.
+  </Card>
+  <Card title="Monitor Usage" icon="chart-line">
+    Regularly check your API usage and payout operations in the dashboard.
+  </Card>
+</CardGroup>
+
+## Authentication Flow
+
+### For Business Operations
+
+```
+1. Get API Key from Dashboard
+   ↓
+2. Include in Authorization Header: Bearer YOUR_API_KEY
+   ↓
+3. Make API Request
+   ↓
+4. Receive Response
+```
+
+### For User Operations
+
+```
+1. Create Payout User (using API Key)
+   ↓
+2. Receive Hash in Response
+   ↓
+3. Provide Hash to User (securely)
+   ↓
+4. User Includes Hash in Requests (X-Payout-Hash header)
+   ↓
+5. User Accesses Their Funds
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Payout User"
+    icon="user-plus"
+    href="/api/payout/create-payout-user"
+  >
+    Learn how to create payout users and allocate funds
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="chart-line"
+    href="https://dashboard.payviox.com"
+  >
+    Manage your API keys and monitor usage
+  </Card>
+</CardGroup>
+

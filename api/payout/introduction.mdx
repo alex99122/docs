@@ -1,0 +1,159 @@
+---
+title: 'Payout API Introduction'
+description: 'Distribute funds to users and manage payout operations'
+---
+
+## Welcome to Payviox Payout API
+
+The Payviox Payout API allows you to allocate funds to users, manage payout balances, and enable users to withdraw their allocated funds through various payout methods including gift cards, crypto, and more.
+
+<Note>
+  **Enable Payouts First:** Before using the Payout API, ensure payouts are enabled for your business in the dashboard settings.
+</Note>
+
+<CardGroup cols={2}>
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/api/payout/authentication"
+  >
+    Learn how to authenticate Payout API requests
+  </Card>
+  <Card
+    title="Create Payout User"
+    icon="user-plus"
+    href="/api/payout/create-payout-user"
+  >
+    Create or add funds to a payout user
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="chart-line"
+    href="https://dashboard.payviox.com"
+  >
+    Monitor your payout balance and users
+  </Card>
+  <Card
+    title="Enable Payouts"
+    icon="toggle-on"
+    href="https://dashboard.payviox.com/settings"
+  >
+    Configure payout settings in your dashboard
+  </Card>
+</CardGroup>
+
+## Key Concepts
+
+### Business Payout Balance
+
+Each business has a dedicated `payout_balance` field that is separate from your main business balance. This balance is used exclusively for payout operations:
+
+- Funds are debited from `payout_balance` when you allocate funds to users
+- You must have sufficient `payout_balance` before creating payout users
+- Balance operations are atomic to prevent race conditions
+
+### Payout Users
+
+Payout users are identified by their email address and are unique per business:
+
+- **Email-based identification**: Each email address represents a unique payout user for your business
+- **Balance allocation**: Users have an allocated balance amount (stored in cents)
+- **Status**: Users can be `active` or `inactive`
+- **Hash**: Each user receives a unique SHA256 HMAC hash for secure verification
+
+### How It Works
+
+<Steps>
+  <Step title="Fund Your Payout Balance">
+    Add funds to your business payout balance through the dashboard or API
+  </Step>
+  <Step title="Create Payout Users">
+    Use the API to create payout users and allocate funds from your payout balance
+  </Step>
+  <Step title="Users Access Funds">
+    Users can access their allocated funds using the hash provided during creation
+  </Step>
+  <Step title="Withdraw Funds">
+    Users can withdraw funds through various payout methods (gift cards, crypto, etc.)
+  </Step>
+</Steps>
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Reward Distribution">
+    Distribute rewards, commissions, or bonuses to users based on their email address. Perfect for affiliate programs, referral systems, or loyalty rewards.
+  </Accordion>
+
+  <Accordion title="Refund Processing">
+    Process refunds by allocating funds to user payout accounts instead of processing traditional refunds. Users can then choose how to withdraw their funds.
+  </Accordion>
+
+  <Accordion title="Gift Card Distribution">
+    Allocate funds to users who can then purchase gift cards from various providers through the payout system.
+  </Accordion>
+
+  <Accordion title="Crypto Payouts">
+    Enable users to withdraw their allocated funds as cryptocurrency to their wallets.
+  </Accordion>
+</AccordionGroup>
+
+## Base URL
+
+All Payout API requests should be made to:
+
+```
+https://api.payviox.com
+```
+
+## Authentication Methods
+
+The Payout API uses two types of authentication:
+
+1. **API Key Authentication** (Bearer Token): Used for creating payout users and managing balances
+2. **Hash Authentication**: Used by payout users to access their funds and make withdrawals
+
+See the [Authentication guide](/api/payout/authentication) for detailed information.
+
+## Security Features
+
+<CardGroup cols={2}>
+  <Card title="Atomic Operations" icon="shield-check">
+    All balance operations are atomic, preventing race conditions and ensuring data consistency
+  </Card>
+  <Card title="Hash-based Access" icon="key">
+    Users access their funds using secure SHA256 HMAC hashes
+  </Card>
+  <Card title="Balance Validation" icon="check-circle">
+    Automatic validation ensures sufficient balance before allocation
+  </Card>
+  <Card title="Status Management" icon="toggle-on">
+    Users can be activated or deactivated to control access
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Enable Payouts">
+    Go to your dashboard settings and enable payouts for your business
+  </Step>
+  <Step title="Fund Your Balance">
+    Add funds to your business payout balance
+  </Step>
+  <Step title="Get Your API Key">
+    Retrieve your API key from the Developer section in your dashboard
+  </Step>
+  <Step title="Create Your First User">
+    Use the Create Payout User endpoint to allocate funds to a user
+  </Step>
+</Steps>
+
+## Support
+
+Need help with the Payout API?
+
+- **Email**: support@payviox.com
+- **Dashboard**: https://dashboard.payviox.com
+- **Documentation**: Continue reading the authentication and endpoint guides
+
