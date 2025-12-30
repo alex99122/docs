@@ -80,19 +80,19 @@ Authorization: Bearer YOUR_API_KEY
   Your unique order identifier. This will be included in webhooks.
 </ParamField>
 
-<ParamField body="items" type="array" required>
+<ParamField body="items" type="object[]" required>
   Array of items being purchased
   
   <Expandable title="Item Object">
-    <ParamField body="name" type="string" required>
+    <ParamField body="items[].name" type="string" required>
       Name of the item
     </ParamField>
     
-    <ParamField body="quantity" type="integer" required>
+    <ParamField body="items[].quantity" type="integer" required>
       Quantity of the item (minimum: 1)
     </ParamField>
     
-    <ParamField body="price" type="integer" required>
+    <ParamField body="items[].price" type="integer" required>
       Price per unit in cents (minimum: 1)
     </ParamField>
   </Expandable>
