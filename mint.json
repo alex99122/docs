@@ -132,7 +132,7 @@
     },
     "playground": {
       "mode": "show"
-    },
-    "openapi": "api/openapi.yaml"
-  }
+    }
+  },
+  "openapi": "openapi.yaml"
 }
