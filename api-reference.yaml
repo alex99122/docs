@@ -58,7 +58,12 @@ components:
           type: array
           description: Array of items being purchased
           items:
-            $ref: '#/components/schemas/Item'
+            type: object
+            additionalProperties: true
+          example:
+            - name: Premium Plan
+              quantity: 1
+              price: 10000
         description:
           type: string
           description: Optional description of the payment
