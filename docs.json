@@ -113,11 +113,9 @@
     "playground": {
       "display": "interactive"
     },
-    "mdx": {
-      "server": "https://api.payviox.com",
-      "auth": {
-        "method": "bearer"
-      }
+    "openapi": "api/openapi.yaml",
+    "auth": {
+      "method": "bearer"
     }
   },
   "background": {

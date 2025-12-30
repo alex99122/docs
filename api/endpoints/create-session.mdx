@@ -1,8 +1,7 @@
 ---
 title: 'Create Session'
-api: 'POST https://api.payviox.com/session'
+openapi: 'POST /session'
 description: 'Create a new payment session'
-authMethod: 'bearer'
 ---
 
 ## Overview
@@ -56,77 +55,6 @@ Authorization: Bearer YOUR_API_KEY
   </Tab>
 </Tabs>
 
-## Request Body
-
-<ParamField body="amount" type="integer" required>
-  The payment amount in cents (e.g., 10000 = $100.00)
-  
-  **Minimum:** 100 (equivalent to $1.00)
-</ParamField>
-
-<ParamField body="currency" type="string" required>
-  Three-letter ISO currency code (e.g., USD, EUR, GBP)
-  
-  **Note:** Currently only USD is supported
-</ParamField>
-
-<ParamField body="customer" type="string" required>
-  Customer identifier. Can be an email, customer ID, or any unique identifier.
-  
-  **Example:** `"customer_abc123"` or `"user@example.com"`
-</ParamField>
-
-<ParamField body="order_id" type="string" required>
-  Your unique order identifier. This will be included in webhooks.
-</ParamField>
-
-<ParamField body="items" type="object[]" required>
-  Array of items being purchased. Each item must contain `name`, `quantity`, and `price` fields.
-</ParamField>
-
-<ParamField body="items[].name" type="string" required>
-  Name of the item
-</ParamField>
-
-<ParamField body="items[].quantity" type="integer" required>
-  Quantity of the item (minimum: 1)
-</ParamField>
-
-<ParamField body="items[].price" type="integer" required>
-  Price per unit in cents (minimum: 1)
-</ParamField>
-
-<ParamField body="description" type="string">
-  Optional description of the payment
-</ParamField>
-
-<ParamField body="paymentMethodId" type="string">
-  Force a specific payment method (optional). When provided, only this payment method will be available.
-</ParamField>
-
-<ParamField body="ip" type="string">
-  **Server-side only.** The end-user's IP address.
-  
-  <Note>
-    This parameter is only available when using your **Secret API Key**. When using the Public API Key, the IP is automatically captured from the request.
-  </Note>
-  
-  **When to use:**
-  - When creating sessions from your backend on behalf of a user
-  - When you want IP validation at payment time
-  
-  **Example:** `"203.0.113.42"` or `"2001:db8::1"`
-  
-  <Warning>
-    If provided, the IP will be validated when the user accesses the payment page. A mismatch will result in a **403 error**.
-  </Warning>
-</ParamField>
-
-## Response
-
-<ResponseField name="session_id" type="string">
-  Unique identifier for the created session
-</ResponseField>
 
 ## Example Requests
 
