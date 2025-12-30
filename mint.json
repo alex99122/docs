@@ -132,6 +132,7 @@
     },
     "playground": {
       "mode": "show"
-    }
+    },
+    "openapi": "api/openapi.yaml"
   }
 }
