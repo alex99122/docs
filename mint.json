@@ -134,5 +134,5 @@
       "mode": "show"
     }
   },
-  "openapi": "openapi.yaml"
+  "openapi": "api-reference.yaml"
 }

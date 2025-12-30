@@ -117,7 +117,7 @@
       "method": "bearer"
     }
   },
-  "openapi": "openapi.yaml",
+  "openapi": "api-reference.yaml",
   "background": {
     "decoration": "gradient"
   },
