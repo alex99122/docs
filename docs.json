@@ -111,7 +111,7 @@
   },
   "api": {
     "playground": {
-      "display": "interactive"
+      "mode": "show"
     },
     "auth": {
       "method": "bearer"

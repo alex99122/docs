@@ -58,7 +58,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Item'
-          description: Array of items being purchased
+          description: List of items included in the session
         description:
           type: string
           description: Optional description of the payment
@@ -132,16 +132,6 @@ paths:
                 ip:
                   type: string
                   description: Server-side only. The end-user's IP address
-            example:
-              amount: 10000
-              currency: USD
-              customer: customer_abc123
-              order_id: order_12345
-              description: Premium subscription
-              items:
-                - name: Premium Plan
-                  quantity: 1
-                  price: 10000
       responses:
         '201':
           description: Session created successfully
