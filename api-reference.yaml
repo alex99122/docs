@@ -96,7 +96,42 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSessionRequest'
+              type: object
+              required:
+                - amount
+                - currency
+                - customer
+                - order_id
+                - items
+              properties:
+                amount:
+                  type: integer
+                  minimum: 100
+                  description: Payment amount in cents (e.g., 10000 = $100.00)
+                currency:
+                  type: string
+                  maxLength: 3
+                  description: Three-letter ISO currency code (e.g., USD)
+                customer:
+                  type: string
+                  description: Customer identifier (email, customer ID, or unique identifier)
+                order_id:
+                  type: string
+                  description: Your unique order identifier
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Item'
+                  description: Array of items being purchased
+                description:
+                  type: string
+                  description: Optional description of the payment
+                paymentMethodId:
+                  type: string
+                  description: Force a specific payment method (optional)
+                ip:
+                  type: string
+                  description: Server-side only. The end-user's IP address
             example:
               amount: 10000
               currency: USD
