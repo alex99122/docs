@@ -113,11 +113,11 @@
     "playground": {
       "display": "interactive"
     },
-    "openapi": "api/openapi.yaml",
     "auth": {
       "method": "bearer"
     }
   },
+  "openapi": "openapi.yaml",
   "background": {
     "decoration": "gradient"
   },
