@@ -81,21 +81,19 @@ Authorization: Bearer YOUR_API_KEY
 </ParamField>
 
 <ParamField body="items" type="object[]" required>
-  Array of items being purchased
-  
-  <Expandable title="Item Object">
-    <ParamField body="items[].name" type="string" required>
-      Name of the item
-    </ParamField>
-    
-    <ParamField body="items[].quantity" type="integer" required>
-      Quantity of the item (minimum: 1)
-    </ParamField>
-    
-    <ParamField body="items[].price" type="integer" required>
-      Price per unit in cents (minimum: 1)
-    </ParamField>
-  </Expandable>
+  Array of items being purchased. Each item must contain `name`, `quantity`, and `price` fields.
+</ParamField>
+
+<ParamField body="items[].name" type="string" required>
+  Name of the item
+</ParamField>
+
+<ParamField body="items[].quantity" type="integer" required>
+  Quantity of the item (minimum: 1)
+</ParamField>
+
+<ParamField body="items[].price" type="integer" required>
+  Price per unit in cents (minimum: 1)
 </ParamField>
 
 <ParamField body="description" type="string">
