@@ -57,10 +57,7 @@ curl https://api.payviox.com/session \
   -d '{
     "amount": 10000,
     "currency": "USD",
-    "customer": {
-      "email": "customer@example.com",
-      "name": "John Doe"
-    },
+    "customer": "customer_abc123",
     "order_id": "order_123",
     "items": [
       {
@@ -82,10 +79,7 @@ const response = await fetch('https://api.payviox.com/session', {
   body: JSON.stringify({
     amount: 10000,
     currency: 'USD',
-    customer: {
-      email: 'customer@example.com',
-      name: 'John Doe'
-    },
+    customer: 'customer_abc123',
     order_id: 'order_123',
     items: [
       {
@@ -112,10 +106,7 @@ headers = {
 data = {
     'amount': 10000,
     'currency': 'USD',
-    'customer': {
-        'email': 'customer@example.com',
-        'name': 'John Doe'
-    },
+    'customer': 'customer_abc123',
     'order_id': 'order_123',
     'items': [
         {
@@ -144,10 +135,7 @@ $url = 'https://api.payviox.com/session';
 $data = [
     'amount' => 10000,
     'currency' => 'USD',
-    'customer' => [
-        'email' => 'customer@example.com',
-        'name' => 'John Doe'
-    ],
+    'customer' => 'customer_abc123',
     'order_id' => 'order_123',
     'items' => [
         [
@@ -190,10 +178,7 @@ request['Content-Type'] = 'application/json'
 request.body = {
   amount: 10000,
   currency: 'USD',
-  customer: {
-    email: 'customer@example.com',
-    name: 'John Doe'
-  },
+  customer: 'customer_abc123',
   order_id: 'order_123',
   items: [
     {
