@@ -73,6 +73,7 @@ curl https://api.payviox.com/session \
     "customer": "customer_abc123",
     "order_id": "order_12345",
     "description": "Premium subscription",
+    "metadata": {"user_id": "usr_123", "plan": "premium"},
     "items": [
       {
         "name": "Premium Plan",
@@ -96,6 +97,7 @@ const response = await fetch('https://api.payviox.com/session', {
     customer: 'customer_abc123',
     order_id: 'order_12345',
     description: 'Premium subscription',
+    metadata: { user_id: 'usr_123', plan: 'premium' },
     items: [
       {
         name: 'Premium Plan',
@@ -125,6 +127,7 @@ payload = {
     'customer': 'customer_abc123',
     'order_id': 'order_12345',
     'description': 'Premium subscription',
+    'metadata': {'user_id': 'usr_123', 'plan': 'premium'},
     'items': [
         {
             'name': 'Premium Plan',
@@ -151,6 +154,7 @@ $data = [
     'customer' => 'customer_abc123',
     'order_id' => 'order_12345',
     'description' => 'Premium subscription',
+    'metadata' => ['user_id' => 'usr_123', 'plan' => 'premium'],
     'items' => [
         [
             'name' => 'Premium Plan',
@@ -194,6 +198,7 @@ request.body = {
   customer: 'customer_abc123',
   order_id: 'order_12345',
   description: 'Premium subscription',
+  metadata: { user_id: 'usr_123', plan: 'premium' },
   items: [
     {
       name: 'Premium Plan',
@@ -227,6 +232,7 @@ func main() {
         "customer": "customer_abc123",
         "order_id":    "order_12345",
         "description": "Premium subscription",
+        "metadata": map[string]string{"user_id": "usr_123", "plan": "premium"},
         "items": []map[string]interface{}{
             {
                 "name":     "Premium Plan",
@@ -272,6 +278,7 @@ curl https://api.payviox.com/session \
     "order_id": "order_12345",
     "description": "Premium subscription",
     "ip": "203.0.113.42",
+    "metadata": {"user_id": "usr_123", "plan": "premium"},
     "items": [
       {
         "name": "Premium Plan",
@@ -299,7 +306,8 @@ app.post('/create-payment', async (req, res) => {
       customer: req.body.customer,
       order_id: 'order_' + Date.now(),
       description: 'Premium subscription',
-      ip: clientIp, // Pass the client's real IP
+      ip: clientIp,
+      metadata: { user_id: req.body.user_id, plan: 'premium' },
       items: req.body.items
     })
   });
@@ -317,7 +325,6 @@ app = Flask(__name__)
 
 @app.route('/create-payment', methods=['POST'])
 def create_payment():
-    # Get the client's real IP
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     
     response = requests.post(
@@ -332,7 +339,8 @@ def create_payment():
             'customer': request.json['customer'],
             'order_id': f'order_{int(time.time())}',
             'description': 'Premium subscription',
-            'ip': client_ip,  # Pass the client's real IP
+            'ip': client_ip,
+            'metadata': {'user_id': request.json['user_id'], 'plan': 'premium'},
             'items': request.json['items']
         }
     )
@@ -344,7 +352,6 @@ def create_payment():
 <?php
 
 Route::post('/create-payment', function (Request $request) {
-    // Get the client's real IP
     $clientIp = $request->header('X-Forwarded-For') ?? $request->ip();
     
     $response = Http::withHeaders([
@@ -356,7 +363,8 @@ Route::post('/create-payment', function (Request $request) {
         'customer' => $request->input('customer'),
         'order_id' => 'order_' . time(),
         'description' => 'Premium subscription',
-        'ip' => $clientIp, // Pass the client's real IP
+        'ip' => $clientIp,
+        'metadata' => ['user_id' => $request->input('user_id'), 'plan' => 'premium'],
         'items' => $request->input('items')
     ]);
     
