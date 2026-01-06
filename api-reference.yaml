@@ -73,6 +73,13 @@ components:
         ip:
           type: string
           description: Server-side only. The end-user's IP address
+        metadata:
+          type: object
+          description: Custom key-value pairs to attach to this session. These will be returned in webhook notifications.
+          additionalProperties: true
+          example:
+            user_id: "usr_123"
+            campaign: "summer_sale"
     CreateSessionResponse:
       type: object
       properties:

@@ -68,6 +68,13 @@ components:
         ip:
           type: string
           description: Server-side only. The end-user's IP address
+        metadata:
+          type: object
+          description: Custom key-value pairs to attach to this session. These will be returned in webhook notifications.
+          additionalProperties: true
+          example:
+            user_id: "usr_123"
+            plan: "premium"
     CreateSessionResponse:
       type: object
       properties:
@@ -103,6 +110,9 @@ paths:
               customer: customer_abc123
               order_id: order_12345
               description: Premium subscription
+              metadata:
+                user_id: "usr_123"
+                plan: "premium"
               items:
                 - name: Premium Plan
                   quantity: 1
