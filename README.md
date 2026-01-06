@@ -34,4 +34,4 @@ Changes are automatically deployed to production after pushing to the default br
 
 - **Documentation**: [https://mintlify.com/docs](https://mintlify.com/docs)
 - **Support**: support@payviox.com
-- **Dashboard**: [https://dashboard.payviox.com](https://dashboard.payviox.com)
+- **Dashboard**: [https://dash.payviox.com](https://dash.payviox.com)

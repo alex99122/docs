@@ -131,7 +131,7 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.payviox.com"
+      "href": "https://dash.payviox.com"
     }
   },
   "footer": {

@@ -216,6 +216,79 @@ console.log('Session ID:', sessionId);
 ```
 </ResponseField>
 
+## Direct Redirect (Skip Payment Page)
+
+When you specify a `paymentMethodId` for a **redirect-based payment provider** (like Zen, Nicepay, PayPal, etc.), the SDK will automatically redirect the customer **directly to the payment provider**, bypassing the Payviox payment page entirely.
+
+<Info>
+  This feature works automatically when using `redirect: true` or `iframeMode: true` with a redirect-based provider.
+</Info>
+
+### How it works
+
+1. You call `createSession()` with a `paymentMethodId` for a redirect-based provider
+2. The API creates the session and initiates the payment in one call
+3. The SDK receives a `redirect_url` in the response
+4. The customer is redirected directly to the provider's payment page
+
+### Example with Direct Redirect
+
+```javascript
+const payviox = new Payviox('your_api_token');
+
+// This will redirect DIRECTLY to Zen's payment page (not Payviox)
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'user@example.com',
+  description: 'Premium Plan',
+  paymentMethodId: 'zen_card', // Redirect-based provider
+  order_id: 'order_' + Date.now(),
+  items: [
+    { name: 'Premium Plan', quantity: 1, price: 5000 }
+  ]
+}, {
+  redirect: true  // Will redirect to provider directly
+});
+```
+
+### Supported Providers
+
+Direct redirect works with these providers:
+- **Zen** (`zen_card`, `zen_blik`, etc.)
+- **Nicepay** (`nicepay_va`, `nicepay_ewallet`, etc.)
+- **PayPal** (`paypal`)
+- **Payssion** (various local payment methods)
+- **Pallapay** (crypto payments)
+- **Crypto.com** (`cryptocom`)
+
+<Tip>
+  If you don't specify a `paymentMethodId`, or use a non-redirect provider, the standard flow applies (redirect to Payviox payment page).
+</Tip>
+
+### Handling Errors
+
+If the payment initiation fails, the SDK will fall back to the standard Payviox payment page where the customer can try again or choose another payment method.
+
+```javascript
+try {
+  const sessionId = await payviox.createSession({
+    amount: 5000,
+    currency: 'USD',
+    customer: 'user@example.com',
+    description: 'Premium Plan',
+    paymentMethodId: 'zen_card',
+    order_id: 'order_' + Date.now(),
+    items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
+  }, { redirect: true });
+  
+  // If redirect didn't happen, you have the session_id
+  console.log('Session ID:', sessionId);
+} catch (error) {
+  console.error('Error:', error.message);
+}
+```
+
 ## Examples
 
 <CodeGroup>

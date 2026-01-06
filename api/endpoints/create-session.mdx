@@ -370,13 +370,186 @@ Route::post('/create-payment', function (Request $request) {
   **Without IP parameter:** If you don't provide the `ip` parameter in server-side requests, no IP validation will be performed at payment time. This is useful when you can't reliably determine the client's IP.
 </Tip>
 
+## Direct Redirect (Skip Payment Page)
+
+When you specify a `paymentMethodId` for a **redirect-based payment provider** (like Zen, Nicepay, PayPal, etc.), the API will automatically initiate the payment and return a `redirect_url` in the response.
+
+This allows you to **bypass the Payviox payment page** entirely and redirect the customer directly to the payment provider.
+
+<Info>
+  This feature is only available for redirect-based providers. For other providers (like Stripe Elements), the standard flow applies.
+</Info>
+
+### How it works
+
+1. Create a session with a `paymentMethodId` for a redirect-based provider
+2. The API creates the session **and** initiates the payment
+3. You receive both `session_id` and `redirect_url` in the response
+4. Redirect your customer directly to the `redirect_url`
+
+### Server-side Direct Redirect Example
+
+<CodeGroup>
+
+```javascript Node.js (Express)
+app.post('/checkout', async (req, res) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.ip;
+  
+  const response = await fetch('https://api.payviox.com/session', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer sk_live_xxxxxxxxxxxx',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      amount: 10000,
+      currency: 'USD',
+      customer: req.body.customer,
+      order_id: 'order_' + Date.now(),
+      description: 'Premium subscription',
+      paymentMethodId: 'zen_card', // Redirect-based provider
+      ip: clientIp,
+      items: req.body.items
+    })
+  });
+  
+  const data = await response.json();
+  
+  // If redirect_url is present, redirect directly to provider
+  if (data.redirect_url) {
+    return res.redirect(data.redirect_url);
+  }
+  
+  // Otherwise, redirect to Payviox payment page
+  res.redirect(`https://secure.payviox.com/${data.session_id}`);
+});
+```
+
+```php PHP (Laravel)
+Route::post('/checkout', function (Request $request) {
+    $clientIp = $request->header('X-Forwarded-For') ?? $request->ip();
+    
+    $response = Http::withHeaders([
+        'Authorization' => 'Bearer sk_live_xxxxxxxxxxxx',
+    ])->post('https://api.payviox.com/session', [
+        'amount' => 10000,
+        'currency' => 'USD',
+        'customer' => $request->input('customer'),
+        'order_id' => 'order_' . time(),
+        'description' => 'Premium subscription',
+        'paymentMethodId' => 'zen_card', // Redirect-based provider
+        'ip' => $clientIp,
+        'items' => $request->input('items')
+    ]);
+    
+    $data = $response->json();
+    
+    // If redirect_url is present, redirect directly to provider
+    if (isset($data['redirect_url'])) {
+        return redirect()->away($data['redirect_url']);
+    }
+    
+    // Otherwise, redirect to Payviox payment page
+    return redirect()->away('https://secure.payviox.com/' . $data['session_id']);
+});
+```
+
+```python Python (Flask)
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    
+    response = requests.post(
+        'https://api.payviox.com/session',
+        headers={
+            'Authorization': 'Bearer sk_live_xxxxxxxxxxxx',
+            'Content-Type': 'application/json'
+        },
+        json={
+            'amount': 10000,
+            'currency': 'USD',
+            'customer': request.json['customer'],
+            'order_id': f'order_{int(time.time())}',
+            'description': 'Premium subscription',
+            'paymentMethodId': 'zen_card',  # Redirect-based provider
+            'ip': client_ip,
+            'items': request.json['items']
+        }
+    )
+    
+    data = response.json()
+    
+    # If redirect_url is present, redirect directly to provider
+    if 'redirect_url' in data:
+        return redirect(data['redirect_url'])
+    
+    # Otherwise, redirect to Payviox payment page
+    return redirect(f"https://secure.payviox.com/{data['session_id']}")
+```
+
+</CodeGroup>
+
+### Redirect-based Providers
+
+The following providers support direct redirect:
+
+| Provider | Payment Methods |
+|----------|----------------|
+| Zen | `zen_card`, `zen_blik`, etc. |
+| Nicepay | `nicepay_va`, `nicepay_ewallet`, etc. |
+| PayPal | `paypal` |
+| Payssion | Various local payment methods |
+| Pallapay | Crypto payments |
+| Crypto.com | `cryptocom` |
+
+<Tip>
+  Use the [Get Payment Methods](/api/endpoints/get-payment-methods) endpoint to discover which payment methods are available for your account.
+</Tip>
+
+### Handling Payment Errors
+
+If the payment initiation fails (e.g., provider API error), the response will include `payment_error` along with the `session_id`. You can then fall back to the standard flow:
+
+```json
+{
+  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "payment_error": {
+    "success": false,
+    "message": "Payment creation failed",
+    "error_type": "http_error"
+  }
+}
+```
+
+<Warning>
+  When `payment_error` is present, the session is still created. You can redirect the customer to `https://secure.payviox.com/{session_id}` to let them try another payment method.
+</Warning>
+
 ## Example Response
 
 <ResponseExample>
 
-```json Success Response (201)
+```json Standard Response (201)
 {
   "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+}
+```
+
+```json Direct Redirect Response (201)
+{
+  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "redirect_url": "https://secure.zen.com/checkout/abc123xyz"
+}
+```
+
+```json Payment Error Response (201)
+{
+  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "payment_error": {
+    "success": false,
+    "message": "Payment creation failed",
+    "error_type": "http_error"
+  }
 }
 ```
 
@@ -452,7 +625,7 @@ After creating a session:
   <Card
     title="Dashboard"
     icon="chart-line"
-    href="https://dashboard.payviox.com"
+    href="https://dash.payviox.com"
   >
     Monitor your payments in real-time
   </Card>
