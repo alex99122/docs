@@ -64,21 +64,23 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
 ```
 
 <Tip>
-The `type` field indicates the payment status: `succeeded`, `processing`, `canceled`, `requires_action`, etc.
+The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`.
 </Tip>
 
-## Payment States
+## Webhook Event Types
 
-A payment can be in one of several states during its lifecycle:
+Payviox sends different webhook events based on the payment lifecycle:
 
-| State | Description | Action Required |
+| Event | Description | Action Required |
 |-------|-------------|-----------------|
-| `succeeded` | Payment completed successfully | Fulfill order |
-| `processing` | Payment is being processed | Wait for final status |
-| `canceled` | Payment was canceled | Cancel order |
-| `requires_action` | Customer action needed | Notify customer |
-| `requires_payment_method` | Payment method required | Request new method |
-| `requires_confirmation` | Confirmation needed | Confirm payment |
+| `succeeded` | Payment completed successfully | ✅ Fulfill order |
+| `pending_review` | Payment flagged for fraud review | ⏳ Wait for final decision |
+| `declined` | Payment declined by fraud prevention (auto-refunded) | ❌ Do NOT fulfill |
+| `refunded` | Refund processed for a transaction | 📦 Handle return/cancellation |
+
+<Warning>
+**Important:** If you receive `pending_review`, do NOT ship or fulfill the order until you receive either `succeeded` or `declined`.
+</Warning>
 
 ## What Happens During Payment?
 

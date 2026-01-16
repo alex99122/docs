@@ -28,7 +28,21 @@ Webhooks allow Payviox to send real-time notifications to your server when payme
   <Step title="Save Your Webhook Token">
     Copy your webhook token - you'll need it to verify webhook signatures
   </Step>
+  <Step title="Select Webhook Events">
+    Choose which events you want to receive. By default, only `succeeded` is enabled.
+  </Step>
 </Steps>
+
+### Available Events
+
+You can subscribe to the following webhook events:
+
+| Event | Description | Recommended |
+|-------|-------------|-------------|
+| `succeeded` | Payment completed successfully | ✅ Always enable |
+| `pending_review` | Payment flagged for fraud review | ✅ If using fraud detection |
+| `declined` | Payment declined by fraud prevention | ✅ If using fraud detection |
+| `refunded` | Refund processed | ✅ If you process refunds |
 
 <Warning>
   Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
@@ -80,13 +94,11 @@ Payviox sends webhooks with the following structure:
 </ParamField>
 
 <ParamField path="type" type="string" required>
-  The payment status. Possible values:
-  - `succeeded`: Payment completed successfully
-  - `processing`: Payment is being processed
-  - `canceled`: Payment was canceled
-  - `requires_payment_method`: Additional payment method required
-  - `requires_confirmation`: Payment requires confirmation
-  - `requires_action`: Additional action required from customer
+  The payment event type. Possible values:
+  - `succeeded`: Payment completed successfully. You can fulfill the order.
+  - `pending_review`: Payment flagged for fraud review. Do NOT ship until you receive `succeeded` or `declined`.
+  - `declined`: Payment declined by fraud prevention. Customer has been automatically refunded.
+  - `refunded`: A refund has been processed for this transaction.
 </ParamField>
 
 <ParamField path="provider" type="string" required>
@@ -116,6 +128,64 @@ Payviox sends webhooks with the following structure:
 <ParamField path="payment_method" type="string">
   Specific payment method used (e.g., card, bank_transfer)
 </ParamField>
+
+## Event Types
+
+Payviox sends different webhook events based on the payment lifecycle. Here's what each event means and how to handle it:
+
+### `succeeded` - Payment Successful
+
+<Card title="✅ Payment Successful" icon="check" color="#22c55e">
+  The payment has been validated by the payment processor. **You can safely fulfill the order.**
+  
+  **Typical flow:**
+  1. Customer completes payment
+  2. Payment processor confirms the charge
+  3. You receive `succeeded` webhook
+  4. Ship the order / provide the service
+</Card>
+
+### `pending_review` - Fraud Review Required
+
+<Card title="⚠️ Pending Review" icon="shield" color="#f59e0b">
+  The payment has been flagged by our fraud detection system for manual review. **Do NOT ship until you receive a final decision.**
+  
+  **Typical flow:**
+  1. Customer completes payment
+  2. Fraud detection flags the transaction
+  3. You receive `pending_review` webhook
+  4. Admin reviews the transaction
+  5. You receive either `succeeded` or `declined` webhook
+</Card>
+
+<Warning>
+  Never fulfill orders that are in `pending_review` status. Wait for the final `succeeded` or `declined` webhook.
+</Warning>
+
+### `declined` - Fraud Declined
+
+<Card title="❌ Declined (Fraud)" icon="ban" color="#ef4444">
+  The payment was automatically declined by the fraud prevention system. **The customer has been automatically refunded.**
+  
+  **Typical flow:**
+  1. Customer completes payment
+  2. Fraud score exceeds threshold
+  3. Automatic refund is issued
+  4. You receive `declined` webhook
+  5. Do NOT ship the order
+</Card>
+
+### `refunded` - Payment Refunded
+
+<Card title="↩️ Refunded" icon="rotate-left" color="#3b82f6">
+  A refund has been processed for this transaction.
+  
+  **Typical flow:**
+  1. Original payment was successful
+  2. Refund is requested (by you or the customer)
+  3. Refund is processed
+  4. You receive `refunded` webhook
+</Card>
 
 ## Webhook Headers
 
@@ -183,19 +253,19 @@ public function handleWebhook(Request $request) {
             $this->fulfillOrder($data['order_id'], $data);
             break;
             
-        case 'processing':
-            // Payment is processing - update order status
-            $this->updateOrderStatus($data['order_id'], 'processing');
+        case 'pending_review':
+            // Payment flagged for fraud review - DO NOT ship yet
+            $this->updateOrderStatus($data['order_id'], 'pending_review');
             break;
             
-        case 'canceled':
-            // Payment was canceled - handle cancellation
-            $this->cancelOrder($data['order_id']);
+        case 'declined':
+            // Payment declined by fraud prevention - customer refunded
+            $this->handleDeclinedPayment($data['order_id']);
             break;
             
-        case 'requires_action':
-            // Customer action required - notify customer
-            $this->notifyCustomerActionRequired($data['order_id']);
+        case 'refunded':
+            // Payment was refunded
+            $this->handleRefund($data['order_id'], $data);
             break;
     }
     
@@ -264,16 +334,18 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (req, res) =
             fulfillOrder(data.order_id, data);
             break;
             
-        case 'processing':
-            updateOrderStatus(data.order_id, 'processing');
+        case 'pending_review':
+            // Payment flagged for fraud review - DO NOT ship yet
+            updateOrderStatus(data.order_id, 'pending_review');
             break;
             
-        case 'canceled':
-            cancelOrder(data.order_id);
+        case 'declined':
+            // Payment declined by fraud prevention - customer refunded
+            handleDeclinedPayment(data.order_id);
             break;
             
-        case 'requires_action':
-            notifyCustomerActionRequired(data.order_id);
+        case 'refunded':
+            handleRefund(data.order_id, data);
             break;
     }
     
@@ -342,12 +414,14 @@ def handle_webhook():
     # Process the webhook based on type
     if data['type'] == 'succeeded':
         fulfill_order(data['order_id'], data)
-    elif data['type'] == 'processing':
-        update_order_status(data['order_id'], 'processing')
-    elif data['type'] == 'canceled':
-        cancel_order(data['order_id'])
-    elif data['type'] == 'requires_action':
-        notify_customer_action_required(data['order_id'])
+    elif data['type'] == 'pending_review':
+        # Payment flagged for fraud review - DO NOT ship yet
+        update_order_status(data['order_id'], 'pending_review')
+    elif data['type'] == 'declined':
+        # Payment declined by fraud prevention - customer refunded
+        handle_declined_payment(data['order_id'])
+    elif data['type'] == 'refunded':
+        handle_refund(data['order_id'], data)
     
     # Return 200 OK to acknowledge receipt
     return jsonify({'status': 'success'}), 200
@@ -410,12 +484,14 @@ post '/api/webhook' do
   case data['type']
   when 'succeeded'
     fulfill_order(data['order_id'], data)
-  when 'processing'
-    update_order_status(data['order_id'], 'processing')
-  when 'canceled'
-    cancel_order(data['order_id'])
-  when 'requires_action'
-    notify_customer_action_required(data['order_id'])
+  when 'pending_review'
+    # Payment flagged for fraud review - DO NOT ship yet
+    update_order_status(data['order_id'], 'pending_review')
+  when 'declined'
+    # Payment declined by fraud prevention - customer refunded
+    handle_declined_payment(data['order_id'])
+  when 'refunded'
+    handle_refund(data['order_id'], data)
   end
   
   # Return 200 OK to acknowledge receipt
@@ -512,12 +588,14 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
     switch data.Type {
     case "succeeded":
         fulfillOrder(data.OrderID, data)
-    case "processing":
-        updateOrderStatus(data.OrderID, "processing")
-    case "canceled":
-        cancelOrder(data.OrderID)
-    case "requires_action":
-        notifyCustomerActionRequired(data.OrderID)
+    case "pending_review":
+        // Payment flagged for fraud review - DO NOT ship yet
+        updateOrderStatus(data.OrderID, "pending_review")
+    case "declined":
+        // Payment declined by fraud prevention - customer refunded
+        handleDeclinedPayment(data.OrderID)
+    case "refunded":
+        handleRefund(data.OrderID, data)
     }
     
     // Return 200 OK to acknowledge receipt
