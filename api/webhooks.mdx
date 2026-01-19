@@ -57,7 +57,11 @@ Payviox sends webhooks with the following structure:
       "price": 10000
     }
   ],
-  "payment_method": "card"
+  "payment_method": "card",
+  "customer": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
 }
 ```
 
@@ -124,6 +128,34 @@ Payviox sends webhooks with the following structure:
 
 <ParamField path="payment_method" type="string">
   Specific payment method used (e.g., card, bank_transfer)
+</ParamField>
+
+<ParamField path="customer" type="object">
+  Optional. Customer information if available from the payment provider.
+  This field is only present when customer data was collected during payment.
+  
+  <Expandable title="customer properties">
+    <ParamField path="name" type="string">
+      Optional. Customer's full name
+    </ParamField>
+    <ParamField path="email" type="string">
+      Optional. Customer's email address
+    </ParamField>
+    <ParamField path="phone" type="string">
+      Optional. Customer's phone number
+    </ParamField>
+    <ParamField path="address" type="object">
+      Optional. Customer's billing address
+      <Expandable title="address properties">
+        <ParamField path="line1" type="string">Optional. Street address line 1</ParamField>
+        <ParamField path="line2" type="string">Optional. Street address line 2</ParamField>
+        <ParamField path="city" type="string">Optional. City</ParamField>
+        <ParamField path="state" type="string">Optional. State/Province</ParamField>
+        <ParamField path="postal_code" type="string">Optional. Postal/ZIP code</ParamField>
+        <ParamField path="country" type="string">Optional. Two-letter country code (ISO 3166-1 alpha-2)</ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
 </ParamField>
 
 ## Webhook Headers

@@ -59,13 +59,21 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
       "price": 10000
     }
   ],
-  "payment_method": "card"
+  "payment_method": "card",
+  "customer": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
 }
 ```
 
 <Tip>
 The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`.
 </Tip>
+
+<Info>
+The `customer` field is optional and only present when customer data was collected during payment. It may include `name`, `email`, `phone`, and `address` depending on the payment provider.
+</Info>
 
 ## Webhook Event Types
 
