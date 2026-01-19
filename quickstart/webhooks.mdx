@@ -46,6 +46,7 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
 {
   "amount": 10000,
   "currency": "USD",
+  "fees": 350,
   "metadata": {
     "integration_session_id": "sess_abc123xyz"
   },
@@ -68,7 +69,7 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
 ```
 
 <Tip>
-The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`.
+The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`. The `fees` field indicates total fees in the smallest currency unit - customer pays `amount + fees = total`.
 </Tip>
 
 <Info>
