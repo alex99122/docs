@@ -56,6 +56,7 @@ Payviox sends webhooks with the following structure:
 {
   "amount": 10000,
   "currency": "USD",
+  "fees": 350,
   "metadata": {
     "integration_session_id": "sess_abc123xyz"
   },
@@ -92,6 +93,10 @@ Payviox sends webhooks with the following structure:
 
 <ParamField path="currency" type="string" required>
   Three-letter ISO currency code (e.g., USD, EUR, GBP)
+</ParamField>
+
+<ParamField path="fees" type="integer">
+  Total fees amount in the smallest currency unit (e.g., cents for USD). The customer pays `amount + fees = total`. This field is present when fees have been calculated for the transaction.
 </ParamField>
 
 <ParamField path="metadata" type="object" required>
