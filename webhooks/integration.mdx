@@ -43,6 +43,7 @@ You can subscribe to the following webhook events:
 | `pending_review` | Payment flagged for fraud review | ✅ If using fraud detection |
 | `declined` | Payment declined by fraud prevention | ✅ If using fraud detection |
 | `refunded` | Refund processed | ✅ If you process refunds |
+| `expired` | Payment session expired without completion | ⚪ Optional |
 
 <Warning>
   Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
@@ -115,6 +116,7 @@ Payviox sends webhooks with the following structure:
   - `pending_review`: Payment flagged for fraud review. Do NOT ship until you receive `succeeded` or `declined`.
   - `declined`: Payment declined by fraud prevention. Customer has been automatically refunded.
   - `refunded`: A refund has been processed for this transaction.
+  - `expired`: Payment session expired without completion.
 </ParamField>
 
 <ParamField path="provider" type="string" required>
@@ -229,6 +231,18 @@ Payviox sends different webhook events based on the payment lifecycle. Here's wh
   2. Refund is requested (by you or the customer)
   3. Refund is processed
   4. You receive `refunded` webhook
+</Card>
+
+### `expired` - Session Expired
+
+<Card title="⏰ Expired" icon="clock" color="#6b7280">
+  The payment session expired before the customer completed payment.
+  
+  **Typical flow:**
+  1. Payment session is created
+  2. Customer does not complete payment within the session lifetime
+  3. Session expires automatically
+  4. You receive `expired` webhook
 </Card>
 
 ## Webhook Headers

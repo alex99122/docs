@@ -98,13 +98,12 @@ Payviox sends webhooks with the following structure:
 </ParamField>
 
 <ParamField path="type" type="string" required>
-  The payment status. Possible values:
-  - `succeeded`: Payment completed successfully
-  - `processing`: Payment is being processed
-  - `canceled`: Payment was canceled
-  - `requires_payment_method`: Additional payment method required
-  - `requires_confirmation`: Payment requires confirmation
-  - `requires_action`: Additional action required from customer
+  The payment event type. Possible values:
+  - `succeeded`: Payment completed successfully. You can fulfill the order.
+  - `pending_review`: Payment flagged for fraud review. Do NOT fulfill until you receive `succeeded` or `declined`.
+  - `declined`: Payment declined by fraud prevention. Customer has been automatically refunded.
+  - `refunded`: A refund has been processed for this transaction.
+  - `expired`: Payment session expired without completion.
 </ParamField>
 
 <ParamField path="provider" type="string" required>
@@ -225,23 +224,23 @@ public function handleWebhook(Request $request) {
     // Process the webhook based on type
     switch ($data['type']) {
         case 'succeeded':
-            // Payment succeeded - fulfill the order
             $this->fulfillOrder($data['order_id'], $data);
             break;
             
-        case 'processing':
-            // Payment is processing - update order status
-            $this->updateOrderStatus($data['order_id'], 'processing');
+        case 'pending_review':
+            $this->updateOrderStatus($data['order_id'], 'pending_review');
             break;
             
-        case 'canceled':
-            // Payment was canceled - handle cancellation
-            $this->cancelOrder($data['order_id']);
+        case 'declined':
+            $this->handleDeclinedPayment($data['order_id']);
             break;
             
-        case 'requires_action':
-            // Customer action required - notify customer
-            $this->notifyCustomerActionRequired($data['order_id']);
+        case 'refunded':
+            $this->handleRefund($data['order_id'], $data);
+            break;
+            
+        case 'expired':
+            $this->handleExpiredSession($data['order_id']);
             break;
     }
     
@@ -310,16 +309,20 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), (req, res) =
             fulfillOrder(data.order_id, data);
             break;
             
-        case 'processing':
-            updateOrderStatus(data.order_id, 'processing');
+        case 'pending_review':
+            updateOrderStatus(data.order_id, 'pending_review');
             break;
             
-        case 'canceled':
-            cancelOrder(data.order_id);
+        case 'declined':
+            handleDeclinedPayment(data.order_id);
             break;
             
-        case 'requires_action':
-            notifyCustomerActionRequired(data.order_id);
+        case 'refunded':
+            handleRefund(data.order_id, data);
+            break;
+            
+        case 'expired':
+            handleExpiredSession(data.order_id);
             break;
     }
     
@@ -388,12 +391,14 @@ def handle_webhook():
     # Process the webhook based on type
     if data['type'] == 'succeeded':
         fulfill_order(data['order_id'], data)
-    elif data['type'] == 'processing':
-        update_order_status(data['order_id'], 'processing')
-    elif data['type'] == 'canceled':
-        cancel_order(data['order_id'])
-    elif data['type'] == 'requires_action':
-        notify_customer_action_required(data['order_id'])
+    elif data['type'] == 'pending_review':
+        update_order_status(data['order_id'], 'pending_review')
+    elif data['type'] == 'declined':
+        handle_declined_payment(data['order_id'])
+    elif data['type'] == 'refunded':
+        handle_refund(data['order_id'], data)
+    elif data['type'] == 'expired':
+        handle_expired_session(data['order_id'])
     
     # Return 200 OK to acknowledge receipt
     return jsonify({'status': 'success'}), 200
@@ -456,12 +461,14 @@ post '/api/webhook' do
   case data['type']
   when 'succeeded'
     fulfill_order(data['order_id'], data)
-  when 'processing'
-    update_order_status(data['order_id'], 'processing')
-  when 'canceled'
-    cancel_order(data['order_id'])
-  when 'requires_action'
-    notify_customer_action_required(data['order_id'])
+  when 'pending_review'
+    update_order_status(data['order_id'], 'pending_review')
+  when 'declined'
+    handle_declined_payment(data['order_id'])
+  when 'refunded'
+    handle_refund(data['order_id'], data)
+  when 'expired'
+    handle_expired_session(data['order_id'])
   end
   
   # Return 200 OK to acknowledge receipt
@@ -558,12 +565,14 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
     switch data.Type {
     case "succeeded":
         fulfillOrder(data.OrderID, data)
-    case "processing":
-        updateOrderStatus(data.OrderID, "processing")
-    case "canceled":
-        cancelOrder(data.OrderID)
-    case "requires_action":
-        notifyCustomerActionRequired(data.OrderID)
+    case "pending_review":
+        updateOrderStatus(data.OrderID, "pending_review")
+    case "declined":
+        handleDeclinedPayment(data.OrderID)
+    case "refunded":
+        handleRefund(data.OrderID, data)
+    case "expired":
+        handleExpiredSession(data.OrderID)
     }
     
     // Return 200 OK to acknowledge receipt

@@ -81,6 +81,12 @@ components:
         session_id:
           type: string
           description: Unique identifier for the created session
+    GetBalanceResponse:
+      type: object
+      properties:
+        balance:
+          type: integer
+          description: Current business balance in cents (e.g., 1500000 = $15,000.00)
     PaymentMethod:
       type: object
       properties:
@@ -128,6 +134,24 @@ paths:
                 session_id: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
         '400':
           description: Bad request
+        '401':
+          description: Unauthorized
+  /balance:
+    get:
+      operationId: getBalance
+      summary: Get Balance
+      description: Retrieve your current business balance
+      tags:
+        - Business
+      responses:
+        '200':
+          description: Balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBalanceResponse'
+              example:
+                balance: 1500000
         '401':
           description: Unauthorized
   /session/{session_id}/payments:

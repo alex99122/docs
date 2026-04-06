@@ -69,7 +69,8 @@
             "group": "API - Endpoints",
             "pages": [
               "api/endpoints/create-session",
-              "api/endpoints/get-payment-methods"
+              "api/endpoints/get-payment-methods",
+              "api/endpoints/get-balance"
             ]
           }
         ]
@@ -88,6 +89,12 @@
             "group": "API Payout - Endpoints",
             "pages": [
               "api/payout/create-payout-user"
+            ]
+          },
+          {
+            "group": "API Payout - Webhooks",
+            "pages": [
+              "api/payout/webhooks"
             ]
           }
         ]
