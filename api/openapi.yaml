@@ -87,6 +87,9 @@ components:
         balance:
           type: integer
           description: Current business balance in cents (e.g., 1500000 = $15,000.00)
+        payout_balance:
+          type: integer
+          description: Current payout balance in cents (e.g., 500000 = $5,000.00)
     PaymentMethod:
       type: object
       properties:
@@ -152,6 +155,7 @@ paths:
                 $ref: '#/components/schemas/GetBalanceResponse'
               example:
                 balance: 1500000
+                payout_balance: 500000
         '401':
           description: Unauthorized
   /session/{session_id}/payments:

@@ -6,10 +6,10 @@ description: 'Retrieve your business balance'
 
 ## Overview
 
-Returns your current business balance in cents. Use this endpoint to programmatically check your available funds.
+Returns your current business balance and payout balance in cents. Use this endpoint to programmatically check your available funds.
 
 <Note>
-  The balance is returned in **cents** (e.g., `1500000` = $15,000.00).
+  All amounts are returned in **cents** (e.g., `1500000` = $15,000.00).
 </Note>
 
 ## Authentication
@@ -126,7 +126,8 @@ func main() {
 
 ```json Success (200)
 {
-  "balance": 1500000
+  "balance": 1500000,
+  "payout_balance": 500000
 }
 ```
 
