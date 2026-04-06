@@ -69,7 +69,7 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
 ```
 
 <Tip>
-The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`. The `fees` field indicates total fees in the smallest currency unit - customer pays `amount + fees = total`.
+The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`, `expired`. The `fees` field indicates total fees in the smallest currency unit - customer pays `amount + fees = total`.
 </Tip>
 
 <Info>
@@ -86,6 +86,7 @@ Payviox sends different webhook events based on the payment lifecycle:
 | `pending_review` | Payment flagged for fraud review | ⏳ Wait for final decision |
 | `declined` | Payment declined by fraud prevention (auto-refunded) | ❌ Do NOT fulfill |
 | `refunded` | Refund processed for a transaction | 📦 Handle return/cancellation |
+| `expired` | Payment session expired without completion | 🕐 Clean up pending order |
 
 <Warning>
 **Important:** If you receive `pending_review`, do NOT ship or fulfill the order until you receive either `succeeded` or `declined`.

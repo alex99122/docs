@@ -1,0 +1,510 @@
+---
+title: 'Payout Webhooks'
+description: 'Receive real-time notifications when payout events occur'
+---
+
+## Overview
+
+Payout webhooks allow Payviox to send real-time HTTP POST notifications to your server when payout status changes occur. This enables you to keep your application synchronized with payout statuses without polling the API.
+
+<Info>
+  Payout webhooks use a **separate URL and secret token** from payment webhooks. Configure your payout webhook URL in the [Payviox Dashboard](https://dash.payviox.com) under **Payout** > **Webhooks**.
+</Info>
+
+## Configuration
+
+<Steps>
+  <Step title="Create Your Endpoint">
+    Create an endpoint on your server to receive POST requests (e.g., `https://yourdomain.com/api/payout-webhook`)
+  </Step>
+  <Step title="Add URL to Dashboard">
+    Go to your [Payviox Dashboard](https://dash.payviox.com) and navigate to **Payout** > **Webhooks**
+  </Step>
+  <Step title="Enter Your Payout Webhook URL">
+    Paste your endpoint URL in the payout webhook URL field
+  </Step>
+  <Step title="Save Your Payout Webhook Token">
+    Copy your payout webhook token - you'll need it to verify webhook signatures
+  </Step>
+  <Step title="Select Payout Events">
+    Choose which payout events you want to receive. By default, only `payout.succeeded` is enabled.
+  </Step>
+  <Step title="Enable Webhooks">
+    Toggle the payout webhook switch to enable delivery.
+  </Step>
+</Steps>
+
+## Available Events
+
+You can subscribe to the following payout webhook events:
+
+| Event | Description | Recommended Action |
+|-------|-------------|--------------------|
+| `payout.created` | Payout order has been created | Update status to "processing" |
+| `payout.processing` | Payout is being sent | Inform the recipient that the payout is on its way |
+| `payout.succeeded` | Payout confirmed and delivered | Confirm delivery to the recipient |
+| `payout.failed` | Payout failed | Contact support or retry |
+| `payout.rejected` | Payout was rejected | Inform the recipient of the rejection |
+
+<Warning>
+  Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
+</Warning>
+
+## Payload Structure
+
+All payout webhooks follow the **same root layout**: amounts, `metadata`, `type`, `provider`, your internal `order_id`, `recipient`, and **exactly one extra object** whose **JSON key matches `provider`** (`paypal`, `crypto`, or any future rail). That object carries provider-specific identifiers and details only—no duplicate amounts.
+
+Some **event types** add optional root fields (e.g. `reason` on `payout.rejected` when an admin note exists). **Omitted fields** are not sent.
+
+### Reference payload
+
+Example for `payout.succeeded` with `provider` `paypal`:
+
+```json
+{
+  "amount": 1000,
+  "currency": "USD",
+  "fees": 20,
+  "net_amount": 980,
+  "metadata": {
+    "payout_user_id": "699af8215799c577cb997eb1"
+  },
+  "type": "payout.succeeded",
+  "provider": "paypal",
+  "order_id": "679abc1234def567890abcde",
+  "recipient": {
+    "email": "sam2@gmail.com"
+  },
+  "paypal": {
+    "order_id": "PP-5MZZ9QME1MLW",
+    "email": "g@gmail.com"
+  }
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Same pattern, `provider`: `crypto`">
+    The `crypto` object replaces `paypal`. Field set may evolve with the rail; amounts stay on the root.
+
+    ```json
+    {
+      "amount": 5000,
+      "currency": "USD",
+      "fees": 150,
+      "net_amount": 4850,
+      "metadata": {
+        "payout_user_id": "abc123"
+      },
+      "type": "payout.succeeded",
+      "provider": "crypto",
+      "order_id": "679def5678abc901234def56",
+      "recipient": {
+        "email": "user@example.com"
+      },
+      "crypto": {
+        "order_id": "OKX-ABCDEF123456",
+        "currency": "USDT",
+        "chain": "ERC20",
+        "crypto_amount": 49.50,
+        "usd_amount": 50.00,
+        "to_address": "0x1234...",
+        "tx_hash": "0xabc...",
+        "confirmations": 12,
+        "network_fee": 0.002
+      }
+    }
+    ```
+  </Accordion>
+  <Accordion title="Event `payout.rejected` + optional `reason`">
+    When a payout is rejected (e.g. PayPal manual review), `type` is `payout.rejected`. **`reason`** is included only if the operator entered a note (same text as in the dashboard).
+
+    ```json
+    {
+      "amount": 1000,
+      "currency": "USD",
+      "fees": 20,
+      "net_amount": 980,
+      "metadata": {
+        "payout_user_id": "699af8215799c577cb997eb1"
+      },
+      "type": "payout.rejected",
+      "provider": "paypal",
+      "order_id": "679abc1234def567890abcde",
+      "recipient": {
+        "email": "sam2@gmail.com"
+      },
+      "paypal": {
+        "order_id": "PP-PENDING-EXAMPLE",
+        "email": "g@gmail.com"
+      },
+      "reason": "Payout request does not match our verification requirements."
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Payload Fields
+
+<ParamField path="amount" type="integer" required>
+  The payout amount in the smallest currency unit (e.g., cents for USD)
+</ParamField>
+
+<ParamField path="currency" type="string" required>
+  Three-letter ISO currency code (always `USD` for payouts)
+</ParamField>
+
+<ParamField path="fees" type="integer">
+  Fees amount in the smallest currency unit. Omitted if zero.
+</ParamField>
+
+<ParamField path="net_amount" type="integer">
+  Amount after fees in the smallest currency unit. Omitted if equal to `amount`.
+</ParamField>
+
+<ParamField path="metadata" type="object" required>
+  Metadata associated with the payout
+
+  <Expandable title="metadata properties">
+    <ParamField path="payout_user_id" type="string">
+      The payout user identifier
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  The payout event type. Possible values:
+  - `payout.created`: Payout order has been created.
+  - `payout.processing`: Payout is being sent.
+  - `payout.succeeded`: Payout confirmed and delivered.
+  - `payout.failed`: Payout failed.
+  - `payout.rejected`: Payout was rejected.
+</ParamField>
+
+<ParamField path="reason" type="string">
+  **Only on `payout.rejected`.** Human-readable rejection note entered by the admin (PayPal payouts). Omitted if no note was provided.
+</ParamField>
+
+<ParamField path="provider" type="string" required>
+  The payout provider: `"paypal"` or `"crypto"`
+</ParamField>
+
+<ParamField path="order_id" type="string" required>
+  Payviox internal order identifier
+</ParamField>
+
+<ParamField path="recipient" type="object" required>
+  Recipient information
+
+  <Expandable title="recipient properties">
+    <ParamField path="email" type="string">
+      Recipient's email address (from their Payviox payout user profile)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="paypal" type="object">
+  PayPal-specific details. Only present when `provider` is `"paypal"`.
+
+  <Expandable title="paypal properties">
+    <ParamField path="order_id" type="string">
+      PayPal payout batch/item identifier (e.g., `PP-XXXXX`)
+    </ParamField>
+    <ParamField path="email" type="string">
+      PayPal recipient email address
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="crypto" type="object">
+  Crypto-specific details. Only present when `provider` is `"crypto"`.
+
+  <Expandable title="crypto properties">
+    <ParamField path="order_id" type="string">
+      Crypto withdrawal identifier (e.g., `OKX-XXXXX`)
+    </ParamField>
+    <ParamField path="currency" type="string">
+      Cryptocurrency symbol (e.g., `USDT`)
+    </ParamField>
+    <ParamField path="chain" type="string">
+      Blockchain network (e.g., `ERC20`, `TRC20`)
+    </ParamField>
+    <ParamField path="crypto_amount" type="number">
+      Amount in cryptocurrency
+    </ParamField>
+    <ParamField path="usd_amount" type="number">
+      Equivalent amount in USD
+    </ParamField>
+    <ParamField path="to_address" type="string">
+      Destination wallet address
+    </ParamField>
+    <ParamField path="tx_hash" type="string">
+      Blockchain transaction hash
+    </ParamField>
+    <ParamField path="confirmations" type="integer">
+      Number of blockchain confirmations
+    </ParamField>
+    <ParamField path="network_fee" type="number">
+      Network fee for the transaction
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="test_mode" type="boolean">
+  Only present on test webhooks sent from the dashboard. Always `true` when present.
+</ParamField>
+
+## Webhook Headers
+
+Every payout webhook request includes these headers:
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | Always `application/json` |
+| `Signature` | HMAC SHA256 signature for verification |
+
+## Signature Verification
+
+<Warning>
+  **Critical Security Step:** Always verify the webhook signature before processing the payload. This ensures the request is legitimate and from Payviox.
+</Warning>
+
+The `Signature` header contains an HMAC SHA256 hash of the request body, signed with your **payout webhook token** (not the payment webhook token).
+
+### Verification Algorithm
+
+1. Get the raw request body (JSON string)
+2. Compute HMAC SHA256 hash using your **payout webhook token** as the secret key
+3. Compare the computed signature with the `Signature` header
+4. Only process the webhook if signatures match
+
+### Implementation Examples
+
+<CodeGroup>
+
+```php PHP
+<?php
+
+function verifyPayoutWebhookSignature($payload, $receivedSignature, $payoutWebhookToken) {
+    $computedSignature = hash_hmac('sha256', $payload, $payoutWebhookToken);
+    return hash_equals($computedSignature, $receivedSignature);
+}
+
+public function handlePayoutWebhook(Request $request) {
+    $payload = $request->getContent();
+    $receivedSignature = $request->header('Signature');
+    $payoutWebhookToken = env('PAYVIOX_PAYOUT_WEBHOOK_TOKEN');
+
+    if (!verifyPayoutWebhookSignature($payload, $receivedSignature, $payoutWebhookToken)) {
+        return response()->json(['error' => 'Invalid signature'], 401);
+    }
+
+    $data = json_decode($payload, true);
+
+    switch ($data['type']) {
+        case 'payout.created':
+            $this->markPayoutProcessing($data['order_id']);
+            break;
+        case 'payout.processing':
+            $this->notifyRecipientInTransit($data['order_id']);
+            break;
+        case 'payout.succeeded':
+            $this->confirmPayoutDelivery($data['order_id'], $data);
+            break;
+        case 'payout.failed':
+            $this->handlePayoutFailure($data['order_id'], $data);
+            break;
+        case 'payout.rejected':
+            $this->handlePayoutRejection($data['order_id'], $data);
+            break;
+    }
+
+    return response()->json(['status' => 'success'], 200);
+}
+```
+
+```javascript Node.js
+const crypto = require('crypto');
+
+function verifyPayoutWebhookSignature(payload, receivedSignature, payoutWebhookToken) {
+    const computedSignature = crypto
+        .createHmac('sha256', payoutWebhookToken)
+        .update(payload)
+        .digest('hex');
+
+    return crypto.timingSafeEqual(
+        Buffer.from(computedSignature),
+        Buffer.from(receivedSignature)
+    );
+}
+
+app.post('/api/payout-webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    const payload = req.body.toString('utf8');
+    const receivedSignature = req.headers['signature'];
+    const payoutWebhookToken = process.env.PAYVIOX_PAYOUT_WEBHOOK_TOKEN;
+
+    if (!verifyPayoutWebhookSignature(payload, receivedSignature, payoutWebhookToken)) {
+        return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    const data = JSON.parse(payload);
+
+    switch (data.type) {
+        case 'payout.created':
+            markPayoutProcessing(data.order_id);
+            break;
+        case 'payout.succeeded':
+            confirmPayoutDelivery(data.order_id, data);
+            break;
+        case 'payout.failed':
+            handlePayoutFailure(data.order_id, data);
+            break;
+        case 'payout.rejected':
+            handlePayoutRejection(data.order_id, data);
+            break;
+    }
+
+    res.json({ status: 'success' });
+});
+```
+
+```python Python
+import hmac
+import hashlib
+import json
+
+def verify_payout_webhook_signature(payload, received_signature, payout_webhook_token):
+    computed_signature = hmac.new(
+        payout_webhook_token.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(computed_signature, received_signature)
+
+@app.route('/api/payout-webhook', methods=['POST'])
+def handle_payout_webhook():
+    payload = request.get_data(as_text=True)
+    received_signature = request.headers.get('Signature')
+    payout_webhook_token = os.environ.get('PAYVIOX_PAYOUT_WEBHOOK_TOKEN')
+
+    if not verify_payout_webhook_signature(payload, received_signature, payout_webhook_token):
+        return jsonify({'error': 'Invalid signature'}), 401
+
+    data = json.loads(payload)
+
+    if data['type'] == 'payout.succeeded':
+        confirm_payout_delivery(data['order_id'], data)
+    elif data['type'] == 'payout.failed':
+        handle_payout_failure(data['order_id'], data)
+    elif data['type'] == 'payout.rejected':
+        handle_payout_rejection(data['order_id'], data)
+
+    return jsonify({'status': 'success'}), 200
+```
+
+</CodeGroup>
+
+## Retry Logic
+
+Payviox implements an automatic retry mechanism for failed payout webhook deliveries:
+
+<Steps>
+  <Step title="First Attempt">
+    Instant delivery (0 seconds)
+  </Step>
+  <Step title="Second Attempt">
+    30 seconds after first failure
+  </Step>
+  <Step title="Third Attempt">
+    5 minutes after second failure
+  </Step>
+  <Step title="Fourth Attempt">
+    30 minutes after third failure
+  </Step>
+</Steps>
+
+<Info>
+  After 4 failed attempts, the webhook will be marked as failed. You can manually retry failed webhooks from the Payviox Dashboard under **Payout** > **Webhook Logs**.
+</Info>
+
+### Success Criteria
+
+A webhook is considered successfully delivered when your endpoint:
+- Returns HTTP status code `200`
+- Responds within 30 seconds
+
+## Testing
+
+You can send a test payout webhook from the dashboard to verify your integration:
+
+1. Go to **Payout** > **Webhooks** in the dashboard
+2. Click **Send Test Webhook**
+3. Select the event type to test
+4. The test payload will include `"test_mode": true`
+
+<Info>
+  Test webhooks use the same signature mechanism as production webhooks. Use them to verify your signature verification logic.
+</Info>
+
+## Best Practices
+
+<Checklist>
+  <Check>Always verify webhook signatures before processing</Check>
+  <Check>Use HTTPS for your webhook endpoint</Check>
+  <Check>Store your payout webhook token securely (environment variables)</Check>
+  <Check>Return 200 OK immediately, then process asynchronously</Check>
+  <Check>Implement idempotency using `order_id` + `type` to handle duplicate webhooks</Check>
+  <Check>Use timing-safe comparison functions for signature verification</Check>
+  <Check>Log all webhook attempts with timestamps for debugging</Check>
+  <Check>Keep your payout webhook token separate from your payment webhook token</Check>
+</Checklist>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Signature Verification Failing">
+    **Possible causes:**
+    - Using the payment webhook token instead of the **payout** webhook token
+    - Parsing/modifying the request body before verification
+    - Incorrect HMAC algorithm (must be SHA256)
+
+    **Solution:** Ensure you are using the payout webhook token from the dashboard. Always verify against the raw request body before any parsing.
+  </Accordion>
+
+  <Accordion title="Webhooks Not Being Received">
+    **Possible causes:**
+    - Payout webhooks are not enabled (toggle is off)
+    - Incorrect payout webhook URL in dashboard
+    - Not subscribed to the event type
+    - Firewall blocking Payviox IP addresses
+
+    **Solution:** Check that payout webhooks are enabled, the URL is correct, and you are subscribed to the relevant events.
+  </Accordion>
+
+  <Accordion title="Duplicate Webhook Processing">
+    **Possible causes:**
+    - Not implementing idempotency checks
+    - Slow response times causing retries
+
+    **Solution:** Implement idempotency using `order_id` + `type` as a unique key. Respond quickly with 200 OK and process asynchronously.
+  </Accordion>
+
+  <Accordion title="Webhook Timeout">
+    **Possible causes:**
+    - Processing taking too long before responding
+    - Database locks or slow queries
+
+    **Solution:** Return 200 OK immediately and process webhooks asynchronously in a background queue.
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+If you're having trouble with payout webhook integration:
+
+- Check the **Payout Webhook Logs** in your dashboard
+- Review your server logs for errors
+- Contact [support@payviox.com](mailto:support@payviox.com) for assistance
+
+<Tip>
+  Use the **Send Test Webhook** feature in the dashboard to quickly verify your integration before going live.
+</Tip>
