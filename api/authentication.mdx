@@ -276,34 +276,15 @@ If your API key has been compromised, you can regenerate it from the dashboard:
 
 ## Error Responses
 
-If authentication fails, you'll receive one of the following responses:
-
-### Missing Authorization Header
+If authentication fails, you'll receive the following response:
 
 ```json
 {
-  "error": "Unauthorized",
-  "message": "Missing authorization header"
+  "error": "Unauthorized"
 }
 ```
 
-### Invalid API Key
-
-```json
-{
-  "error": "Unauthorized",
-  "message": "Invalid API key"
-}
-```
-
-### Expired API Key
-
-```json
-{
-  "error": "Unauthorized",
-  "message": "API key has expired"
-}
-```
+This error is returned when the `Authorization` header is missing, the API key is invalid, or the API key has been regenerated. Check your API key and try again.
 
 ## Best Practices
 

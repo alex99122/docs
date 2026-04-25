@@ -205,7 +205,7 @@ func main() {
 
 <ResponseExample>
 
-```json Success Response (200)
+```json Success (200)
 {
   "stripe_credit": {
     "countries": null,
@@ -250,26 +250,29 @@ func main() {
 }
 ```
 
-</ResponseExample>
-
-## Error Responses
-
-<ResponseExample>
-
 ```json Unauthorized (401)
 {
   "error": "Unauthorized"
 }
 ```
 
-```json Invalid Parameters (400)
-{
-  "error": "Invalid country code",
-  "message": "Country code must be ISO 3166-1 alpha-2 format"
-}
-```
-
 </ResponseExample>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="401 — Unauthorized">
+    Returned when the API key is missing or invalid.
+
+    **How to resolve:** Ensure you are sending a valid API key in the `Authorization: Bearer` header. Both Public and Secret API keys are accepted.
+
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
 
 ## Understanding the Response
 

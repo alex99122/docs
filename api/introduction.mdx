@@ -72,9 +72,7 @@ https://api.payviox.com
 
 ## Rate Limits
 
-The API has the following rate limits:
-- **100 requests per minute** for authenticated requests
-- **10 requests per minute** for unauthenticated requests
+Rate limiting is enforced on all API endpoints. If you exceed the limit, you will receive a `429 Too Many Requests` response with a `Retry-After` header indicating when you can retry.
 
 ## Support
 
