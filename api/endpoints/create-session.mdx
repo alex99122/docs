@@ -561,13 +561,7 @@ If the payment initiation fails (e.g., provider API error), the response will in
 }
 ```
 
-</ResponseExample>
-
-## Error Responses
-
-<ResponseExample>
-
-```json Missing Required Fields (400)
+```json Validation Error (400)
 {
   "amount": [
     "The amount field is required."
@@ -578,37 +572,86 @@ If the payment initiation fails (e.g., provider API error), the response will in
 }
 ```
 
-```json Amount Validation Error (400)
-{
-  "amount": [
-    "The total amount does not match the sum of the items (calculated: 15000, received: 10000)"
-  ]
-}
-```
-
 ```json Unauthorized (401)
 {
   "error": "Unauthorized"
 }
 ```
 
-```json Invalid Payment Method (400)
+```json Rate Limited (429)
 {
-  "error": "Payment method not found"
-}
-```
-
-```json IP Mismatch (403) - At payment time
-{
-  "error": "IP mismatch",
-  "message": "Request IP does not match session IP"
+  "error": "rate_limit_exceeded",
+  "message": "Too many session requests",
+  "type": "ip",
+  "retry_after": 60
 }
 ```
 
 </ResponseExample>
 
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 — Validation Error">
+    Returned when request body fields are missing or invalid. The response contains an object where each key is a field name and the value is an array of error messages.
+
+    **Common causes:**
+    - Required fields missing (`amount`, `currency`, `customer`, `order_id`, `items`)
+    - Amount does not match the sum of item prices
+    - Invalid item structure (missing name, quantity, or price)
+
+    ```json
+    {
+      "amount": ["The amount field is required."],
+      "currency": ["The currency field is required."]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="400 — Payment Method Not Found">
+    Returned when the `paymentMethodId` parameter references a payment method that does not exist or is not enabled for your business.
+
+    **How to resolve:** Use the [Get Payment Methods](/api/endpoints/get-payment-methods) endpoint to list available methods.
+
+    ```json
+    {
+      "error": "Payment method not found"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="401 — Unauthorized">
+    Returned when the API key is missing or invalid.
+
+    **How to resolve:** Ensure you are sending a valid API key in the `Authorization: Bearer` header.
+
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="429 — Rate Limit Exceeded">
+    Returned when too many requests are sent in a short period of time, either per customer or per IP address.
+
+    The response includes a `retry_after` field (in seconds) and a `Retry-After` HTTP header indicating when you can retry.
+
+    **How to resolve:** Wait for the duration indicated by `retry_after` before retrying. Implement exponential backoff in your integration.
+
+    ```json
+    {
+      "error": "rate_limit_exceeded",
+      "message": "Too many session requests",
+      "type": "ip",
+      "retry_after": 60
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
 <Note>
-  The **IP mismatch** error occurs at payment time (not session creation) when the user's IP doesn't match the `ip` parameter provided during session creation. This is a fraud prevention measure.
+  The **IP mismatch** error (403) occurs at **payment time**, not during session creation. If you provided an `ip` parameter when creating the session, the payment page will verify that the user's IP matches. This is a fraud prevention measure.
 </Note>
 
 ## Next Steps

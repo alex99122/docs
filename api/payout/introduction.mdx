@@ -48,9 +48,9 @@ The Payviox Payout API allows you to allocate funds to users, manage payout bala
 
 Each business has a dedicated `payout_balance` field that is separate from your main business balance. This balance is used exclusively for payout operations:
 
-- Funds are debited from `payout_balance` when you allocate funds to users
-- You must have sufficient `payout_balance` before creating payout users
-- Balance operations are atomic to prevent race conditions
+- Funds are debited from your payout balance when you allocate funds to users
+- You must have sufficient payout balance before creating payout users
+- Balance operations are transactional to ensure consistency
 
 ### Payout Users
 
@@ -59,7 +59,7 @@ Payout users are identified by their email address and are unique per business:
 - **Email-based identification**: Each email address represents a unique payout user for your business
 - **Balance allocation**: Users have an allocated balance amount (stored in cents)
 - **Status**: Users can be `active` or `inactive`
-- **Hash**: Each user receives a unique SHA256 HMAC hash for secure verification
+- **Hash**: Each user receives a unique secure hash for verification
 
 ### How It Works
 
@@ -118,11 +118,11 @@ See the [Authentication guide](/api/payout/authentication) for detailed informat
 ## Security Features
 
 <CardGroup cols={2}>
-  <Card title="Atomic Operations" icon="shield-check">
-    All balance operations are atomic, preventing race conditions and ensuring data consistency
+  <Card title="Transactional Safety" icon="shield-check">
+    All balance operations are transactional, ensuring data consistency
   </Card>
   <Card title="Hash-based Access" icon="key">
-    Users access their funds using secure SHA256 HMAC hashes
+    Users access their funds using secure hashes
   </Card>
   <Card title="Balance Validation" icon="check-circle">
     Automatic validation ensures sufficient balance before allocation

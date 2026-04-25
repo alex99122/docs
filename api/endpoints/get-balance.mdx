@@ -131,12 +131,6 @@ func main() {
 }
 ```
 
-</ResponseExample>
-
-## Error Responses
-
-<ResponseExample>
-
 ```json Unauthorized (401)
 {
   "error": "Unauthorized"
@@ -144,3 +138,19 @@ func main() {
 ```
 
 </ResponseExample>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="401 — Unauthorized">
+    Returned when the API key is missing or invalid. This endpoint requires your **Secret API Key**.
+
+    **How to resolve:** Ensure you are sending a valid Secret API key in the `Authorization: Bearer` header. Public API keys are not accepted for this endpoint.
+
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>

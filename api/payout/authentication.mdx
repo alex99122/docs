@@ -104,7 +104,7 @@ Hash authentication is used by **payout users** to access their funds and perfor
 
 ### How It Works
 
-When you create a payout user, the API returns a unique SHA256 HMAC hash. This hash is used to authenticate the user's requests.
+When you create a payout user, the API returns a unique secure hash. This hash is used to authenticate the user's requests.
 
 ### Using the Hash
 
@@ -168,54 +168,25 @@ response = requests.get(
 
 ## Hash Characteristics
 
-### Consistency
-
-- The hash is **deterministic**: the same email address always generates the same hash
-- The hash is **unique per business**: same email for different businesses will have different hashes
-- The hash **cannot be reverse-engineered**: you cannot determine the email from the hash
-
-### Security
-
-- Hash generation uses a server-side secret key that is never exposed
+- The hash is **unique per business**: the same email for different businesses will have different hashes
+- The hash is generated **server-side** and cannot be computed by the client
 - Hashes are validated against active payout users only
 - Expired or inactive users cannot use their hash
 
 ## Error Responses
 
-### Missing Authentication
+All authentication errors return the same generic response to avoid leaking information about the cause of the failure:
 
 ```json
 {
-  "error": "Unauthorized",
-  "message": "Missing authorization header"
+  "error": "Unauthorized"
 }
 ```
 
-### Invalid API Key
-
-```json
-{
-  "error": "Unauthorized",
-  "message": "Invalid API key"
-}
-```
-
-### Invalid or Inactive Hash
-
-```json
-{
-  "error": "Unauthorized",
-  "message": "Payout hash not found or inactive"
-}
-```
-
-### Payouts Disabled
-
-```json
-{
-  "error": "Payouts are currently disabled. Please enable them in Settings."
-}
-```
+This error is returned when:
+- The `Authorization` header or payout hash is missing
+- The API key or payout hash is invalid
+- The payout user is inactive
 
 ## Security Best Practices
 

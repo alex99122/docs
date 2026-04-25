@@ -67,17 +67,17 @@ Example for `payout.succeeded` with `provider` `paypal`:
   "fees": 20,
   "net_amount": 980,
   "metadata": {
-    "payout_user_id": "699af8215799c577cb997eb1"
+    "payout_user_id": "usr_550e8400-e29b-41d4-a716-446655440000"
   },
   "type": "payout.succeeded",
   "provider": "paypal",
-  "order_id": "679abc1234def567890abcde",
+  "order_id": "ord_7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "recipient": {
-    "email": "sam2@gmail.com"
+    "email": "user@example.com"
   },
   "paypal": {
     "order_id": "PP-5MZZ9QME1MLW",
-    "email": "g@gmail.com"
+    "email": "recipient@example.com"
   }
 }
 ```
@@ -93,16 +93,16 @@ Example for `payout.succeeded` with `provider` `paypal`:
       "fees": 150,
       "net_amount": 4850,
       "metadata": {
-        "payout_user_id": "abc123"
+        "payout_user_id": "usr_a3bb189e-8bf9-3888-9912-ace4e6543002"
       },
       "type": "payout.succeeded",
       "provider": "crypto",
-      "order_id": "679def5678abc901234def56",
+      "order_id": "ord_b6c1f5e8-3a9d-4f2e-8c7b-1d2e3f4a5b6c",
       "recipient": {
         "email": "user@example.com"
       },
       "crypto": {
-        "order_id": "OKX-ABCDEF123456",
+        "order_id": "CRX-ABCDEF123456",
         "currency": "USDT",
         "chain": "ERC20",
         "crypto_amount": 49.50,
@@ -125,17 +125,17 @@ Example for `payout.succeeded` with `provider` `paypal`:
       "fees": 20,
       "net_amount": 980,
       "metadata": {
-        "payout_user_id": "699af8215799c577cb997eb1"
+        "payout_user_id": "usr_550e8400-e29b-41d4-a716-446655440000"
       },
       "type": "payout.rejected",
       "provider": "paypal",
-      "order_id": "679abc1234def567890abcde",
+      "order_id": "ord_7c9e6679-7425-40de-944b-e07fc1f90ae7",
       "recipient": {
-        "email": "sam2@gmail.com"
+        "email": "user@example.com"
       },
       "paypal": {
         "order_id": "PP-PENDING-EXAMPLE",
-        "email": "g@gmail.com"
+        "email": "recipient@example.com"
       },
       "reason": "Payout request does not match our verification requirements."
     }
@@ -189,7 +189,7 @@ Example for `payout.succeeded` with `provider` `paypal`:
 </ParamField>
 
 <ParamField path="order_id" type="string" required>
-  Payviox internal order identifier
+  Unique order identifier for this payout
 </ParamField>
 
 <ParamField path="recipient" type="object" required>
@@ -220,7 +220,7 @@ Example for `payout.succeeded` with `provider` `paypal`:
 
   <Expandable title="crypto properties">
     <ParamField path="order_id" type="string">
-      Crypto withdrawal identifier (e.g., `OKX-XXXXX`)
+      Crypto withdrawal identifier
     </ParamField>
     <ParamField path="currency" type="string">
       Cryptocurrency symbol (e.g., `USDT`)

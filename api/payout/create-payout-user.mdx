@@ -7,14 +7,14 @@ authMethod: 'bearer'
 
 ## Overview
 
-Creates a new payout user or adds funds to an existing payout user. The amount is automatically debited from your business payout balance and allocated to the user. This endpoint uses atomic operations to prevent race conditions and ensure data consistency.
+Creates a new payout user or adds funds to an existing payout user. The amount is automatically debited from your business payout balance and allocated to the user.
 
 <Note>
   Payouts must be enabled for your business in the dashboard settings before using this endpoint.
 </Note>
 
 <Warning>
-  This endpoint requires a secure API key. The operation debits your business payout balance atomically, so ensure you have sufficient funds before calling this endpoint.
+  This endpoint requires a secure API key. Ensure you have sufficient payout balance before calling this endpoint.
 </Warning>
 
 ## Authentication
@@ -44,7 +44,7 @@ Authorization: Bearer YOUR_API_KEY
 ## Response
 
 <ResponseField name="hash" type="string">
-  SHA256 HMAC hash generated for the payout user. This hash can be used to retrieve payout information later.
+  Unique hash generated for the payout user. This hash can be used to retrieve payout information later.
 </ResponseField>
 
 ## Example Request
@@ -187,19 +187,13 @@ func main() {
 
 <ResponseExample>
 
-```json Success Response (201)
+```json Success (201)
 {
   "hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
 }
 ```
 
-</ResponseExample>
-
-## Error Responses
-
-<ResponseExample>
-
-```json Missing Required Fields (400)
+```json Validation Error (400)
 {
   "email": [
     "The email field is required."
@@ -210,33 +204,9 @@ func main() {
 }
 ```
 
-```json Invalid Email Format (400)
-{
-  "email": [
-    "The email must be a valid email address."
-  ]
-}
-```
-
-```json Invalid Amount (400)
-{
-  "amount": [
-    "The amount must be at least 1."
-  ]
-}
-```
-
-```json Amount Too Large (400)
-{
-  "amount": [
-    "The amount may not be greater than 100000000."
-  ]
-}
-```
-
 ```json Insufficient Balance (400)
 {
-  "error": "Failed to debit business balance (insufficient funds or concurrent modification)"
+  "error": "Insufficient payout balance"
 }
 ```
 
@@ -254,19 +224,86 @@ func main() {
 
 ```json Server Error (500)
 {
-  "error": "Failed to create payout user"
+  "error": "Internal server error"
 }
 ```
 
 </ResponseExample>
 
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 — Validation Error">
+    Returned when request body fields are missing or invalid. The response contains an object where each key is a field name and the value is an array of error messages.
+
+    **Common causes:**
+    - `email` is missing or not a valid email format
+    - `amount` is missing, not an integer, less than 1, or exceeds the maximum
+
+    ```json
+    {
+      "email": ["The email must be a valid email address."],
+      "amount": ["The amount must be at least 1."]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="400 — Insufficient Balance">
+    Returned when your business payout balance is too low to cover the requested amount.
+
+    **How to resolve:** Check your payout balance using the [Get Balance](/api/endpoints/get-balance) endpoint before creating payout users, or add funds via the dashboard.
+
+    ```json
+    {
+      "error": "Insufficient payout balance"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="401 — Unauthorized">
+    Returned when the API key is missing or invalid.
+
+    **How to resolve:** Ensure you are sending a valid Secret API Key in the `Authorization: Bearer` header.
+
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="403 — Payouts Disabled">
+    Returned when payouts are not enabled for your business.
+
+    **How to resolve:** Enable payouts in your [dashboard settings](https://dash.payviox.com/settings).
+
+    ```json
+    {
+      "error": "Payouts are currently disabled. Please enable them in Settings."
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="500 — Server Error">
+    Returned when an unexpected error occurs on the server. No funds are debited if this error occurs.
+
+    **How to resolve:** Retry the request. If the error persists, contact [support](mailto:support@payviox.com).
+
+    ```json
+    {
+      "error": "Internal server error"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
 ## How It Works
 
-### Atomic Operations
+### Transaction Safety
 
-This endpoint uses MongoDB atomic operations to ensure data consistency:
+This endpoint uses transactional operations to ensure data consistency:
 
-1. **Business Balance Debit**: The amount is atomically debited from your business `payout_balance`. If insufficient funds exist, the operation fails immediately.
+1. **Business Balance Debit**: The amount is debited from your business payout balance. If insufficient funds exist, the operation fails immediately.
 2. **User Creation/Update**: The payout user is created (if new) or updated (if existing) with the amount added to their balance.
 3. **Transaction History**: A history record is created to track the transaction.
 
@@ -277,10 +314,9 @@ This endpoint uses MongoDB atomic operations to ensure data consistency:
 
 ### Hash Generation
 
-Each payout user receives a unique SHA256 HMAC hash based on their email address. This hash:
-- Remains consistent for the same email address
+Each payout user receives a unique hash. This hash:
 - Can be used to retrieve payout information
-- Is generated server-side using a secure secret
+- Is generated server-side
 - Can be used for hash-based authentication (see [Authentication](/api/payout/authentication#hash-authentication))
 
 ## Validation Rules
@@ -300,8 +336,8 @@ Each payout user receives a unique SHA256 HMAC hash based on their email address
   </Accordion>
 
   <Accordion title="Business Balance">
-    - Your business must have sufficient `payout_balance` to cover the amount
-    - The balance check and debit are atomic (prevents race conditions)
+    - Your business must have sufficient payout balance to cover the amount
+    - The balance check and debit happen in a single transaction
     - If balance is insufficient, the operation fails without creating the user
   </Accordion>
 
@@ -336,7 +372,7 @@ Each payout user receives a unique SHA256 HMAC hash based on their email address
 </Tip>
 
 <Warning>
-  **Idempotency**: This endpoint is idempotent for existing users - calling it multiple times with the same email will add the amount each time. Ensure you don't accidentally duplicate allocations.
+  **Not idempotent**: Calling this endpoint multiple times with the same email will add the amount each time. Ensure you don't accidentally duplicate allocations.
 </Warning>
 
 <Tip>
@@ -344,7 +380,7 @@ Each payout user receives a unique SHA256 HMAC hash based on their email address
 </Tip>
 
 <Note>
-  **Concurrent Requests**: The endpoint uses atomic operations, so concurrent requests for the same user are safe. However, ensure your business balance can cover all concurrent allocations.
+  **Concurrent Requests**: Concurrent requests for the same user are safe. However, ensure your business balance can cover all concurrent allocations.
 </Note>
 
 ## Next Steps
