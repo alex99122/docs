@@ -1,4 +1,18 @@
 (function () {
+  if (typeof document !== 'undefined') {
+    var links = [
+      { href: '/api-reference.yaml', rel: 'service-desc', type: 'application/openapi+yaml' },
+      { href: '/.well-known/mcp/server-card.json', rel: 'describedby', type: 'application/json' },
+    ];
+    links.forEach(function (l) {
+      var el = document.createElement('link');
+      el.rel = l.rel;
+      el.href = l.href;
+      if (l.type) el.type = l.type;
+      document.head.appendChild(el);
+    });
+  }
+
   if (typeof navigator === 'undefined' || !navigator.modelContext) return;
 
   navigator.modelContext.registerTool({
