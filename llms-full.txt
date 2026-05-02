@@ -1,0 +1,507 @@
+# Payviox Documentation
+
+> Payviox is a payment infrastructure for online businesses. Accept payments via cards, local payment methods, and crypto. Integrate using the JavaScript SDK (client-side) or the REST API (server-side). Receive payment confirmations via webhooks. All amounts are in cents (e.g. 5000 = $50.00).
+
+## Product Overview
+
+- Website: https://payviox.com
+- Dashboard: https://dash.payviox.com
+- API base URL: https://api.payviox.com
+- Payment page: https://secure.payviox.com/{session_id}
+- SDK CDN: https://sdk.payviox.com/payviox.js
+- Docs: https://docs.payviox.com
+- Support: support@payviox.com
+
+### API Key Types
+
+| Key type | Prefix | Use from | IP handling |
+|----------|--------|----------|-------------|
+| Public API Key | `pk_` | Browser / SDK | Auto-captured from request |
+| Secret API Key | `sk_` | Backend server | Optional `ip` param for fraud prevention |
+
+Both key types work with the same endpoints. Secret keys unlock the `ip` parameter on session creation. Test keys use prefix `pk_test_` / `sk_test_`.
+
+Authentication: `Authorization: Bearer YOUR_API_KEY`
+
+---
+
+## Integration Decision Guide
+
+### RECOMMENDED DEFAULT: JavaScript SDK with redirect mode
+
+Use when: any web app, SPA, or website where you want payments working in minutes.
+
+Why:
+- Simplest integration (5-10 lines of code)
+- No backend required
+- Full PCI compliance (payment data never touches your server)
+- Customer is redirected to Payviox-hosted secure payment page
+
+### USE SDK iframe mode ONLY IF:
+
+- The user explicitly wants an embedded payment form (no page redirect)
+- AND their domain can be whitelisted in the Payviox dashboard
+
+### USE REST API ONLY IF:
+
+- Backend-only application (no browser), OR
+- Mobile app backend, OR
+- Non-JavaScript tech stack (Python, PHP, Ruby, Go, etc.), OR
+- Need server-side control over session creation (e.g. IP fraud prevention), OR
+- Need direct provider redirect (skip Payviox payment page entirely)
+
+### USE REST API with paymentMethodId IF:
+
+- You want to bypass the Payviox payment page and send the customer directly to a specific payment provider (Zen, Nicepay, PayPal, Payssion, Pallapay, Crypto.com)
+- The API returns a `redirect_url` instead of just a `session_id`
+
+### Decision Summary
+
+| Scenario | Recommended approach |
+|----------|---------------------|
+| Simple web checkout | SDK redirect mode |
+| Embedded payment form | SDK iframe mode |
+| Backend creates sessions | REST API + redirect to `https://secure.payviox.com/{session_id}` |
+| Skip Payviox payment page | REST API with `paymentMethodId` for a redirect-based provider |
+| Mobile app | REST API from your backend |
+| Non-JS stack | REST API |
+| Distributing funds to users | Payout API |
+
+---
+
+## JavaScript SDK Reference
+
+### Installation
+
+CDN (recommended):
+```html
+<script src="https://sdk.payviox.com/payviox.js"></script>
+```
+
+NPM:
+```bash
+npm install @payviox/sdk
+```
+
+```javascript
+import Payviox from '@payviox/sdk';
+```
+
+### Initialization
+
+```javascript
+const payviox = new Payviox('pk_live_xxxxxxxxxxxx');
+```
+
+The constructor takes your public API key (string). The SDK auto-configures the API endpoint (https://api.payviox.com) and payment page URL (https://secure.payviox.com).
+
+### createSession(sessionParameters, options?) -> Promise<void | string>
+
+Creates a payment session. Returns `void` if redirect is enabled (page redirects immediately), or a `string` session ID otherwise.
+
+#### SessionParameters (all required):
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `amount` | number | Amount in cents. Min 100 ($1.00). Must equal sum of items. |
+| `currency` | string | ISO currency code: `USD`, `EUR`, `GBP`, etc. |
+| `customer` | string | Customer identifier (email or ID) |
+| `description` | string | Human-readable payment description |
+| `paymentMethodId` | string | Payment method ID. Use `pm_card` for cards, or get IDs from `getPaymentsMethods()`. |
+| `order_id` | string | Unique order identifier for your business |
+| `items` | array | Array of `{ name: string, quantity: number, price: number }`. Price is per unit in cents. |
+
+#### PayvioxParameters (optional):
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `redirect` | boolean | false | Auto-redirect to payment page. Cannot be used with `iframeMode`. |
+| `iframeMode` | boolean | false | Embed payment in iframe. Requires `iframeConfig`. |
+| `iframeConfig` | object | - | Iframe settings (see below). Required when `iframeMode` is true. |
+
+#### IframeConfig:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `iframeTarget` | HTMLElement | required | DOM element to insert iframe into |
+| `width` | string | "100%" | CSS width |
+| `height` | string | "400px" | CSS height |
+| `withoutBorder` | boolean | false | Remove iframe border |
+| `transparentBackground` | boolean | false | Transparent background |
+| `style` | string | "" | Additional CSS styles |
+
+#### Complete Example — Redirect Mode:
+
+```javascript
+const payviox = new Payviox('pk_live_xxxxxxxxxxxx');
+
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'customer_123',
+  description: 'Premium Plan',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_' + Date.now(),
+  items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
+}, {
+  redirect: true
+});
+```
+
+#### Complete Example — Iframe Mode:
+
+```javascript
+const payviox = new Payviox('pk_live_xxxxxxxxxxxx');
+
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'customer_123',
+  description: 'Premium Plan',
+  paymentMethodId: 'pm_card',
+  order_id: 'order_' + Date.now(),
+  items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
+}, {
+  iframeMode: true,
+  iframeConfig: {
+    iframeTarget: document.getElementById('payment-container'),
+    width: '100%',
+    height: '600px',
+    withoutBorder: true
+  }
+});
+```
+
+#### Direct Provider Redirect:
+
+When `paymentMethodId` is for a redirect-based provider (zen_card, paypal, nicepay_va, etc.), the SDK redirects the customer directly to the provider's page, skipping Payviox's payment page.
+
+```javascript
+await payviox.createSession({
+  amount: 5000,
+  currency: 'USD',
+  customer: 'customer_123',
+  description: 'Premium Plan',
+  paymentMethodId: 'zen_card',
+  order_id: 'order_' + Date.now(),
+  items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
+}, { redirect: true });
+```
+
+### openSession(sessionId) -> void
+
+Manually redirects the user to `https://secure.payviox.com/{sessionId}`. Use when you need to do something between session creation and redirect.
+
+```javascript
+const sessionId = await payviox.createSession(params);
+// ... do something ...
+payviox.openSession(sessionId);
+```
+
+### openIframe(sessionId, iframeConfig) -> void
+
+Manually opens an iframe for an existing session. Same `iframeConfig` as above.
+
+### getPaymentsMethods(filters?) -> Promise<PaymentMethod[]>
+
+Returns available payment methods, optionally filtered.
+
+```javascript
+const methods = await payviox.getPaymentsMethods({
+  currencies: 'USD',
+  countries: 'US'
+});
+```
+
+Filters: `currencies` (string | string[]), `countries` (string | string[]).
+
+Response type:
+```typescript
+interface PaymentMethod {
+  id: string;        // Use as paymentMethodId
+  name: string;      // Display name
+  type: string;      // "card", "bank_transfer", "wallet", etc.
+  currencies: string[];
+  countries: string[];
+}
+```
+
+---
+
+## REST API Reference
+
+Base URL: `https://api.payviox.com`
+Auth: `Authorization: Bearer YOUR_API_KEY`
+
+### POST /session — Create Payment Session
+
+Creates a payment session. Accepts both public and secret API keys.
+
+Request body:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | integer | yes | Amount in cents. Min 100. Must equal sum of items. |
+| `currency` | string | yes | ISO currency code |
+| `customer` | string | yes | Customer identifier |
+| `order_id` | string | yes | Unique order ID |
+| `description` | string | no | Payment description |
+| `items` | array | yes | `[{ name, quantity, price }]` |
+| `metadata` | object | no | Custom key-value pairs |
+| `ip` | string | no | Client IP (secret key only). If provided, IP is validated at payment time. |
+| `paymentMethodId` | string | no | If set to a redirect-based provider, response includes `redirect_url`. |
+
+Response (201):
+```json
+{ "session_id": "a1b2c3d4e5f6..." }
+```
+
+With paymentMethodId for redirect provider:
+```json
+{ "session_id": "a1b2c3d4e5f6...", "redirect_url": "https://provider.com/pay/..." }
+```
+
+If payment initiation fails:
+```json
+{ "session_id": "a1b2c3d4e5f6...", "payment_error": { "success": false, "message": "...", "error_type": "..." } }
+```
+
+Error responses: 400 (validation), 401 (unauthorized), 429 (rate limited with `retry_after` in seconds).
+
+After creating a session, redirect the customer to: `https://secure.payviox.com/{session_id}`
+
+### GET /payments/methods — Get Payment Methods
+
+Query params: `countries` (comma-separated), `currencies` (comma-separated), `is_company` (boolean).
+
+Response (200): Object where keys are payment method IDs:
+```json
+{
+  "stripe_credit": {
+    "name": "Credit Card (Stripe)",
+    "image": "https://cdn.payviox.com/images/stripe.png",
+    "countries": null,
+    "currencies": null,
+    "fees": { "static_fees": 0.30, "percent_fees": 0.029 }
+  }
+}
+```
+
+`null` for countries/currencies means globally available. Fee formula: `total_fee = static_fees + (amount_in_dollars * percent_fees)`.
+
+### GET /balance — Get Business Balance
+
+Requires secret API key.
+
+Response (200):
+```json
+{ "balance": 1500000, "payout_balance": 500000 }
+```
+
+Both values in cents.
+
+---
+
+## Payout API Reference
+
+The Payout API lets you allocate funds to users who can then withdraw via gift cards, crypto, PayPal, etc.
+
+### POST /payout/create — Create or Fund Payout User
+
+Auth: `Authorization: Bearer YOUR_API_KEY` (secret key)
+
+Request body:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | yes | Payout user email (unique per business) |
+| `amount` | integer | yes | Amount in cents to allocate (debited from your payout_balance) |
+
+Response (201):
+```json
+{ "hash": "a1b2c3d4e5f6..." }
+```
+
+The hash is used by the payout user to access their funds. If the email already exists, the amount is added to their existing balance.
+
+Errors: 400 (validation / insufficient balance), 401 (unauthorized), 403 (payouts disabled).
+
+### Payout User Authentication
+
+Payout users authenticate with their hash via: `X-Payout-Hash: HASH` header (recommended), or `payout_hash` in body/query.
+
+---
+
+## Payment Webhooks
+
+Payviox sends HTTP POST webhooks to your configured URL when payment events occur. Configure in Dashboard > Settings > Webhooks.
+
+### Event Types
+
+| Event | Meaning | Action |
+|-------|---------|--------|
+| `succeeded` | Payment completed | Fulfill the order |
+| `pending_review` | Flagged for fraud review | Do NOT fulfill yet — wait for succeeded or declined |
+| `declined` | Declined by fraud prevention | Customer auto-refunded. Do not fulfill. |
+| `refunded` | Refund processed | Handle refund logic |
+| `expired` | Session expired without payment | Optional cleanup |
+
+### Payload Structure
+
+```json
+{
+  "amount": 10000,
+  "currency": "USD",
+  "fees": 350,
+  "metadata": { "integration_session_id": "sess_abc123" },
+  "type": "succeeded",
+  "provider": "stripe",
+  "order_id": "order_123456",
+  "items": [{ "name": "Premium", "quantity": 1, "price": 10000 }],
+  "payment_method": "card",
+  "customer": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+1234567890",
+    "address": { "line1": "123 Main St", "city": "Paris", "postal_code": "75001", "country": "FR" }
+  }
+}
+```
+
+The `customer` object is optional and only present when data was collected by the provider. The `fees` field represents additional fees the customer pays on top of the amount.
+
+### Signature Verification
+
+Header: `Signature` — HMAC-SHA256 of the raw request body using your webhook token.
+
+```javascript
+const crypto = require('crypto');
+
+function verifySignature(rawBody, signature, webhookToken) {
+  const computed = crypto.createHmac('sha256', webhookToken).update(rawBody).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(signature));
+}
+```
+
+```python
+import hmac, hashlib
+
+def verify_signature(raw_body, signature, webhook_token):
+    computed = hmac.new(webhook_token.encode(), raw_body.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(computed, signature)
+```
+
+```php
+function verifySignature($rawBody, $signature, $webhookToken) {
+    $computed = hash_hmac('sha256', $rawBody, $webhookToken);
+    return hash_equals($computed, $signature);
+}
+```
+
+### Retry Policy
+
+4 attempts: immediate, then 30s, 5min, 30min. Success = HTTP 200 within 30 seconds. After 4 failures, marked as failed (retryable from dashboard).
+
+### Best Practices
+
+- Always verify signature before processing
+- Return 200 OK immediately, process asynchronously
+- Implement idempotency using `order_id` + `type`
+- Never fulfill orders with `pending_review` status — wait for final event
+
+---
+
+## Payout Webhooks
+
+Separate URL and token from payment webhooks. Configure in Dashboard > Payout > Webhooks.
+
+### Event Types
+
+| Event | Meaning |
+|-------|---------|
+| `payout.created` | Payout order created |
+| `payout.processing` | Payout being sent |
+| `payout.succeeded` | Payout delivered |
+| `payout.failed` | Payout failed |
+| `payout.rejected` | Payout rejected (may include `reason` field) |
+
+### Payload Structure
+
+Same pattern as payment webhooks: amounts on root, provider-specific data in a nested object keyed by provider name (`paypal` or `crypto`).
+
+```json
+{
+  "amount": 1000,
+  "currency": "USD",
+  "fees": 20,
+  "net_amount": 980,
+  "metadata": { "payout_user_id": "usr_..." },
+  "type": "payout.succeeded",
+  "provider": "paypal",
+  "order_id": "ord_...",
+  "recipient": { "email": "user@example.com" },
+  "paypal": { "order_id": "PP-...", "email": "recipient@example.com" }
+}
+```
+
+Signature verification is identical to payment webhooks but uses the payout webhook token. Same retry policy (4 attempts).
+
+---
+
+## Common Integration Patterns
+
+### E-commerce Checkout (SDK Redirect)
+
+1. Include SDK via CDN
+2. On "Pay" button click, call `createSession()` with `redirect: true`
+3. Customer pays on Payviox page
+4. Webhook `succeeded` fires → fulfill order
+5. Customer redirected back to your site
+
+### SaaS Subscription (REST API Server-Side)
+
+1. Backend calls `POST /session` with secret key + customer IP
+2. Return `session_id` to frontend
+3. Frontend redirects to `https://secure.payviox.com/{session_id}`
+4. Webhook `succeeded` fires → activate subscription
+
+### Marketplace Payout
+
+1. Receive payments via SDK or API
+2. Call `POST /payout/create` with seller's email and amount
+3. Seller receives hash to access payout page
+4. Seller withdraws via PayPal, crypto, or gift cards
+5. Payout webhook `payout.succeeded` fires → confirm delivery
+
+### Error Handling
+
+```javascript
+try {
+  await payviox.createSession(params, { redirect: true });
+} catch (error) {
+  if (error.message.includes('Unauthorized')) {
+    // Invalid API key
+  } else if (error.message.includes('Bad request')) {
+    // Invalid parameters
+  } else {
+    // Network or server error — retry with backoff
+  }
+}
+```
+
+---
+
+## Redirect-Based Providers (Direct Redirect)
+
+These providers support skipping the Payviox payment page when `paymentMethodId` is set:
+
+| Provider | Example IDs |
+|----------|-------------|
+| Zen | `zen_card`, `zen_blik` |
+| Nicepay | `nicepay_va`, `nicepay_ewallet` |
+| PayPal | `paypal` |
+| Payssion | Various local methods |
+| Pallapay | Crypto |
+| Crypto.com | `cryptocom` |
+
+Use `GET /payments/methods` to discover available IDs for your account.

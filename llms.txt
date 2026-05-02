@@ -1,0 +1,40 @@
+# Payviox
+
+> Payment infrastructure for online businesses. JavaScript SDK and REST API to accept cards, local payment methods, and crypto with webhook notifications.
+
+Payviox provides two integration methods: a client-side JavaScript SDK (recommended for web apps) and a server-side REST API (for backends, mobile apps, and non-JS stacks). All amounts are in cents. Payments are confirmed asynchronously via webhooks with HMAC-SHA256 signature verification.
+
+## Getting Started
+- [Overview](https://docs.payviox.com/quickstart/overview.md): Complete payment flow diagram and step-by-step from session creation to webhook confirmation
+- [Choose Integration Method](https://docs.payviox.com/quickstart/integration-methods.md): SDK vs API comparison table with decision criteria based on your tech stack
+- [Complete Examples](https://docs.payviox.com/quickstart/examples.md): Full working code for SDK redirect, REST API session creation, and webhook handlers in JS, PHP, and Python
+- [Security Best Practices](https://docs.payviox.com/quickstart/best-practices.md): API key management, webhook verification, PCI compliance, and error handling guidelines
+
+## JavaScript SDK
+- [Installation](https://docs.payviox.com/sdk/installation.md): CDN script tag (`https://sdk.payviox.com/payviox.js`) or npm install `@payviox/sdk`
+- [Payviox Class](https://docs.payviox.com/sdk/api-reference/payviox-class.md): Constructor `new Payviox(apiKey)`, initialization with public API key (pk_ prefix)
+- [createSession()](https://docs.payviox.com/sdk/api-reference/create-session.md): Create payment session with amount, currency, items, paymentMethodId. Supports redirect mode, iframe mode, and direct provider redirect
+- [Redirect Mode](https://docs.payviox.com/sdk/integration/redirect.md): Full-page redirect to Payviox-hosted payment page. Simplest integration — `createSession(params, { redirect: true })`
+- [Iframe Mode](https://docs.payviox.com/sdk/integration/iframe.md): Embed payment form in your page via iframe. Requires domain whitelisting in dashboard
+
+## REST API
+- [Authentication](https://docs.payviox.com/api/authentication.md): Bearer token auth with public key (pk_) for client-side or secret key (sk_) for server-side. Secret key enables IP fraud prevention parameter
+- [POST /session](https://docs.payviox.com/api/endpoints/create-session.md): Create payment session with amount, currency, items, order_id. Supports optional paymentMethodId for direct provider redirect and ip parameter for fraud prevention
+- [GET /payments/methods](https://docs.payviox.com/api/endpoints/get-payment-methods.md): List available payment methods filtered by country and currency. Returns method IDs, names, fees, and geographic availability
+- [GET /balance](https://docs.payviox.com/api/endpoints/get-balance.md): Retrieve business balance and payout balance in cents. Requires secret API key
+
+## Webhooks
+- [Webhook Integration](https://docs.payviox.com/webhooks/integration.md): Receive HTTP POST payment events (succeeded, pending_review, declined, refunded, expired). HMAC-SHA256 signature verification. Retry policy: 4 attempts over 30 minutes. Idempotency via order_id
+
+## API Specs
+- [OpenAPI Specification](https://docs.payviox.com/api-reference.yaml): Full OpenAPI 3.0 spec for all endpoints
+
+## Optional
+- [Payment Method IDs](https://docs.payviox.com/sdk/api-reference/payment-methods.md): Understanding and using payment method identifiers with getPaymentsMethods()
+- [openSession()](https://docs.payviox.com/sdk/api-reference/open-session.md): Manual redirect helper for deferred navigation to payment page
+- [openIframe()](https://docs.payviox.com/sdk/api-reference/open-iframe.md): Manual iframe helper for deferred iframe embedding
+- [getPaymentsMethods()](https://docs.payviox.com/sdk/api-reference/get-payments-methods.md): SDK method to retrieve available payment methods with currency/country filters
+- [Payout API Introduction](https://docs.payviox.com/api/payout/introduction.md): Distribute funds to users via gift cards, crypto, and PayPal
+- [Payout Authentication](https://docs.payviox.com/api/payout/authentication.md): Bearer token for business ops, hash-based auth for payout users
+- [Create Payout User](https://docs.payviox.com/api/payout/create-payout-user.md): POST /payout/create — allocate funds to a user by email. Debits from payout_balance
+- [Payout Webhooks](https://docs.payviox.com/api/payout/webhooks.md): Payout lifecycle events (created, processing, succeeded, failed, rejected) with PayPal and crypto provider details
