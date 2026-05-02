@@ -1,0 +1,18 @@
+{
+  "serverInfo": {
+    "name": "payviox-mcp",
+    "version": "1.0.0",
+    "description": "Payviox Payment Processing MCP Server"
+  },
+  "endpoint": "https://api.payviox.com/mcp",
+  "transport": "streamable-http",
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "authentication": {
+    "type": "bearer",
+    "description": "Use your Payviox Secret API Key as Bearer token"
+  }
+}
