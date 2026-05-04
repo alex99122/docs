@@ -128,6 +128,10 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
   Two-letter country code detected from the end-user's IP address (e.g., `FR`, `US`).
 </ResponseField>
 
+<ResponseField name="user_agent" type="string">
+  End-user's browser User-Agent string at the time of payment.
+</ResponseField>
+
 ## Example Requests
 
 <CodeGroup>
@@ -283,7 +287,8 @@ func main() {
     }
   },
   "ip": "203.0.113.42",
-  "country": "FR"
+  "country": "FR",
+  "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 }
 ```
 
@@ -314,7 +319,8 @@ func main() {
   "customer_details": null,
   "payment_details": null,
   "ip": null,
-  "country": null
+  "country": null,
+  "user_agent": null
 }
 ```
 
