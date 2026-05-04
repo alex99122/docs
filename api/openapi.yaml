@@ -219,6 +219,10 @@ components:
           type: string
           nullable: true
           description: Two-letter country code from IP geolocation
+        user_agent:
+          type: string
+          nullable: true
+          description: End-user's browser User-Agent string
 paths:
   /session:
     post:
