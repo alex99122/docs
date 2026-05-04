@@ -67,12 +67,13 @@
             ]
           },
           {
-            "group": "API - Endpoints",
-            "pages": [
-              "api/endpoints/create-session",
-              "api/endpoints/get-payment-methods",
-              "api/endpoints/get-balance"
-            ]
+          "group": "API - Endpoints",
+          "pages": [
+            "api/endpoints/create-session",
+            "api/endpoints/get-payment-methods",
+            "api/endpoints/get-balance",
+            "api/endpoints/get-payment-details"
+          ]
           }
         ]
       },
