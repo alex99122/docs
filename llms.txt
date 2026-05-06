@@ -15,7 +15,7 @@ Payviox provides two integration methods: a client-side JavaScript SDK (recommen
 - [Payviox Class](https://docs.payviox.com/sdk/api-reference/payviox-class.md): Constructor `new Payviox(apiKey)`, initialization with public API key (pk_ prefix)
 - [createSession()](https://docs.payviox.com/sdk/api-reference/create-session.md): Create payment session with amount, currency, items, paymentMethodId. Supports redirect mode, iframe mode, and direct provider redirect
 - [Redirect Mode](https://docs.payviox.com/sdk/integration/redirect.md): Full-page redirect to Payviox-hosted payment page. Simplest integration — `createSession(params, { redirect: true })`
-- [Iframe Mode](https://docs.payviox.com/sdk/integration/iframe.md): Embed payment form in your page via iframe. Requires domain whitelisting in dashboard
+- [Iframe Mode](https://docs.payviox.com/sdk/integration/iframe.md): Embed payment form in your page via iframe. Requires domain whitelisting. Handles payviox:redirect (full-page redirect for providers) and payviox:close (dismiss iframe) postMessage events. Includes standalone integration without SDK
 
 ## REST API
 - [Authentication](https://docs.payviox.com/api/authentication.md): Bearer token auth with public key (pk_) for client-side or secret key (sk_) for server-side. Secret key enables IP fraud prevention parameter
