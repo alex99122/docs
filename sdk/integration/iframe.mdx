@@ -1,6 +1,6 @@
 ---
 title: "Iframe integration"
-description: "Embed the Payviox payment form directly in your page using an iframe. Requires domain whitelisting in dashboard. Configure width, height, border, and background transparency via iframeConfig"
+description: "Embed the Payviox payment form directly in your page using an iframe. Requires domain whitelisting. Configure width, height, border, transparency via iframeConfig. Handles payviox:redirect and payviox:close postMessage events for provider redirects and iframe dismissal. Includes standalone integration example without SDK."
 icon: "window"
 ---
 
@@ -131,6 +131,45 @@ Configuration object for iframe behavior and appearance.
   </ParamField>
 </Expandable>
 </ParamField>
+
+## Handling iframe events
+
+When using iframe mode, the payment page communicates with the parent window via the [`postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) API. The SDK handles these events automatically, but you can also listen for them directly if you are embedding the iframe without the SDK.
+
+### Event types
+
+| Event type | Description | Payload |
+|------------|-------------|---------|
+| `payviox:redirect` | Payment requires a full-page redirect (to a payment provider or success/failure URL) | `{ type: 'payviox:redirect', redirect: 'https://...' }` |
+| `payviox:close` | Customer clicked "Back to merchant" — the iframe should be removed | `{ type: 'payviox:close' }` |
+
+<Note>
+**Redirect-type payments** (PayPal, Pallapay, etc.) cannot be displayed inside an iframe due to security restrictions (`X-Frame-Options`). When the customer selects one of these methods, the payment page sends a `payviox:redirect` event to navigate the full page to the provider.
+</Note>
+
+### Standalone integration (without SDK)
+
+If you embed the Payviox iframe manually without using the SDK, you must listen for these events yourself:
+
+```javascript
+const PAYVIOX_ORIGIN = 'https://secure.payviox.com';
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== PAYVIOX_ORIGIN) return;
+
+  if (event.data?.type === 'payviox:redirect') {
+    // Payment requires full-page redirect (provider or success/failure URL)
+    window.location.href = event.data.redirect;
+  } else if (event.data?.type === 'payviox:close') {
+    // Customer wants to go back — remove the iframe
+    document.getElementById('payment-container').innerHTML = '';
+  }
+});
+```
+
+<Warning>
+Always validate `event.origin` against `https://secure.payviox.com` before acting on any message.
+</Warning>
 
 ## Troubleshooting
 

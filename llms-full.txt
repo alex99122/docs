@@ -172,6 +172,29 @@ await payviox.createSession({
 });
 ```
 
+#### Iframe Events (postMessage)
+
+When using iframe mode, the payment page communicates with the parent window via postMessage. The SDK handles these automatically, but standalone integrations must listen manually.
+
+| Event type | When | Payload |
+|------------|------|---------|
+| `payviox:redirect` | Payment requires full-page redirect (provider page or success/failure URL) | `{ type: 'payviox:redirect', redirect: 'https://...' }` |
+| `payviox:close` | Customer clicked "Back to merchant" — remove the iframe | `{ type: 'payviox:close' }` |
+
+Redirect-type providers (PayPal, Pallapay, etc.) block iframe embedding via X-Frame-Options, so the payment page sends `payviox:redirect` for a full-page navigation.
+
+Standalone listener (without SDK):
+```javascript
+window.addEventListener('message', (event) => {
+  if (event.origin !== 'https://secure.payviox.com') return;
+  if (event.data?.type === 'payviox:redirect') {
+    window.location.href = event.data.redirect;
+  } else if (event.data?.type === 'payviox:close') {
+    document.getElementById('payment-container').innerHTML = '';
+  }
+});
+```
+
 #### Direct Provider Redirect:
 
 When `paymentMethodId` is for a redirect-based provider (zen_card, paypal, nicepay_va, etc.), the SDK redirects the customer directly to the provider's page, skipping Payviox's payment page.
