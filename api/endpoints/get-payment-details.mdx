@@ -150,7 +150,7 @@ const response = await fetch('https://api.payviox.com/payment/a1b2c3d4e5f6g7h8i9
 
 const payment = await response.json();
 console.log(payment.status);       // "succeeded"
-console.log(payment.net_amount);   // 9750
+console.log(payment.net_amount);   // 10000
 ```
 
 ```python Python
@@ -165,7 +165,7 @@ response = requests.get(
 
 payment = response.json()
 print(payment['status'])       # "succeeded"
-print(payment['net_amount'])   # 9750
+print(payment['net_amount'])   # 10000
 ```
 
 ```php PHP
@@ -186,7 +186,7 @@ curl_close($ch);
 
 $payment = json_decode($response, true);
 echo $payment['status'];       // "succeeded"
-echo $payment['net_amount'];   // 9750
+echo $payment['net_amount'];   // 10000
 ```
 
 ```ruby Ruby
@@ -204,7 +204,7 @@ request['Authorization'] = 'Bearer sk_live_xxxxxxxxxxxx'
 response = http.request(request)
 payment = JSON.parse(response.body)
 puts payment['status']       # "succeeded"
-puts payment['net_amount']   # 9750
+puts payment['net_amount']   # 10000
 ```
 
 ```go Go
@@ -230,7 +230,7 @@ func main() {
     var payment map[string]interface{}
     json.NewDecoder(resp.Body).Decode(&payment)
     fmt.Println(payment["status"])      // "succeeded"
-    fmt.Println(payment["net_amount"])  // 9750
+    fmt.Println(payment["net_amount"])  // 10000
 }
 ```
 
@@ -244,9 +244,9 @@ func main() {
 {
   "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "status": "succeeded",
-  "amount": 10000,
+  "amount": 10250,
   "fees": 250,
-  "net_amount": 9750,
+  "net_amount": 10000,
   "currency": "USD",
   "order_id": "order_12345",
   "customer": "customer_abc123",
