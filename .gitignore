@@ -1,0 +1,4 @@
+# This docs repo is PUBLIC (Mintlify deploys from it).
+# Internal files: keep them locally for tooling, but never commit them here.
+CLAUDE.md
+.cursor/

@@ -1,0 +1,10 @@
+# Files that must NEVER be published to the public docs site (docs.payviox.com).
+# Mintlify otherwise serves any .md/.mdx as an orphan page reachable by direct URL.
+# .mintignore uses .gitignore syntax and makes matches completely inaccessible (not just hidden).
+
+# Agent / AI assistant instructions (internal)
+CLAUDE.md
+.cursor/
+
+# Internal dev README (Mintlify CLI preview notes, not a documentation page)
+/README.md
