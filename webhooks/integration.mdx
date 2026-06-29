@@ -101,10 +101,6 @@ Payviox sends webhooks with the following structure:
   Total fees amount in the smallest currency unit (e.g., cents for USD). The customer pays `amount + fees = total`. This field is present when fees have been calculated for the transaction.
 </ParamField>
 
-<ParamField path="amount_remaining" type="integer">
-  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD) — how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
-</ParamField>
-
 <ParamField path="metadata" type="object" required>
   Custom metadata associated with the payment session
   
@@ -181,6 +177,10 @@ Payviox sends webhooks with the following structure:
   </Expandable>
 </ParamField>
 
+<ParamField path="amount_remaining" type="integer">
+  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD) — how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
+</ParamField>
+
 ## Event Types
 
 Payviox sends different webhook events based on the payment lifecycle. Here's what each event means and how to handle it:
@@ -249,6 +249,22 @@ Payviox sends different webhook events based on the payment lifecycle. Here's wh
   2. Customer does not complete payment within the session lifetime
   3. Session expires automatically
   4. You receive `expired` webhook
+</Card>
+
+### `incomplete` - Crypto Payment Underpaid
+
+<Card title="⚠️ Incomplete" icon="triangle-exclamation" color="#e6a01e">
+  A crypto payment came in short — the customer sent less than the requested amount. This is an **opt-in** event (enable it in your webhook settings), and only applies to crypto payments.
+
+  The payload includes **`amount_remaining`** (how much is still due, in the smallest currency unit). The amount already received equals `amount - amount_remaining`.
+
+  **Typical flow:**
+  1. Customer pays a crypto invoice but sends less than the requested amount
+  2. You receive `incomplete` (with `amount_remaining`)
+  3. Customer sends the remaining amount to the same address
+  4. You receive `succeeded`
+
+  **Do NOT fulfill** the order until you receive `succeeded`.
 </Card>
 
 ## Webhook Headers

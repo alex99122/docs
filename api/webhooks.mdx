@@ -84,10 +84,6 @@ Payviox sends webhooks with the following structure:
   Total fees amount in the smallest currency unit (e.g., cents for USD). The customer pays `amount + fees = total`. This field is present when fees have been calculated for the transaction.
 </ParamField>
 
-<ParamField path="amount_remaining" type="integer">
-  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD), i.e. how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
-</ParamField>
-
 <ParamField path="metadata" type="object" required>
   Metadata associated with the payment session. Contains the Payviox session ID plus any custom metadata you provided during session creation.
   
@@ -165,6 +161,10 @@ Payviox sends webhooks with the following structure:
       </Expandable>
     </ParamField>
   </Expandable>
+</ParamField>
+
+<ParamField path="amount_remaining" type="integer">
+  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD), i.e. how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
 </ParamField>
 
 ## Webhook Headers
