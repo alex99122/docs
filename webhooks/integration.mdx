@@ -1,6 +1,6 @@
 ---
 title: 'Webhook Integration'
-description: 'Receive HTTP POST webhook notifications for payment events (succeeded, pending_review, declined, refunded, expired). Includes HMAC-SHA256 signature verification, full payload structure, retry policy (4 attempts), and idempotency handling'
+description: 'Receive HTTP POST webhook notifications for payment events (succeeded, pending_review, declined, refunded, expired, incomplete). Includes HMAC-SHA256 signature verification, full payload structure, retry policy (4 attempts), and idempotency handling'
 ---
 
 ## Overview
@@ -44,6 +44,7 @@ You can subscribe to the following webhook events:
 | `declined` | Payment declined by fraud prevention | ✅ If using fraud detection |
 | `refunded` | Refund processed | ✅ If you process refunds |
 | `expired` | Payment session expired without completion | ⚪ Optional |
+| `incomplete` | Crypto payment underpaid — customer sent less than requested | ⚪ Optional (crypto only) |
 
 <Warning>
   Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
@@ -100,6 +101,10 @@ Payviox sends webhooks with the following structure:
   Total fees amount in the smallest currency unit (e.g., cents for USD). The customer pays `amount + fees = total`. This field is present when fees have been calculated for the transaction.
 </ParamField>
 
+<ParamField path="amount_remaining" type="integer">
+  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD) — how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
+</ParamField>
+
 <ParamField path="metadata" type="object" required>
   Custom metadata associated with the payment session
   
@@ -117,6 +122,7 @@ Payviox sends webhooks with the following structure:
   - `declined`: Payment declined by fraud prevention. Customer has been automatically refunded.
   - `refunded`: A refund has been processed for this transaction.
   - `expired`: Payment session expired without completion.
+  - `incomplete`: A crypto payment came in short (less than the requested amount). Opt-in event. Includes `amount_remaining` (how much is still due). Do NOT fulfill until you receive `succeeded`.
 </ParamField>
 
 <ParamField path="provider" type="string" required>
