@@ -368,6 +368,7 @@ Payviox sends HTTP POST webhooks to your configured URL when payment events occu
 | `declined` | Declined by fraud prevention | Customer auto-refunded. Do not fulfill. |
 | `refunded` | Refund processed | Handle refund logic |
 | `expired` | Session expired without payment | Optional cleanup |
+| `incomplete` | Crypto payment underpaid (opt-in event; includes `amount_remaining` in cents) | Do NOT fulfill — wait for succeeded |
 
 ### Payload Structure
 

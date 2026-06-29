@@ -84,6 +84,10 @@ Payviox sends webhooks with the following structure:
   Total fees amount in the smallest currency unit (e.g., cents for USD). The customer pays `amount + fees = total`. This field is present when fees have been calculated for the transaction.
 </ParamField>
 
+<ParamField path="amount_remaining" type="integer">
+  Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD), i.e. how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
+</ParamField>
+
 <ParamField path="metadata" type="object" required>
   Metadata associated with the payment session. Contains the Payviox session ID plus any custom metadata you provided during session creation.
   
@@ -104,6 +108,7 @@ Payviox sends webhooks with the following structure:
   - `declined`: Payment declined by fraud prevention. Customer has been automatically refunded.
   - `refunded`: A refund has been processed for this transaction.
   - `expired`: Payment session expired without completion.
+  - `incomplete`: A crypto payment came in short (the customer sent less than the requested amount). Opt-in event — enable it in your webhook settings. Includes `amount_remaining` (how much is still due). Do NOT fulfill until you receive `succeeded`.
 </ParamField>
 
 <ParamField path="provider" type="string" required>
