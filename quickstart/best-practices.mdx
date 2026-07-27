@@ -133,8 +133,10 @@ const PAYVIOX_TOKEN = process.env.NODE_ENV === 'production'
 Change your API tokens periodically and immediately if compromised.
 </Accordion>
 
-<Accordion title="Never expose tokens client-side">
-For production, use tokens only on your server, never in frontend code.
+<Accordion title="Never expose your secret key client-side">
+Your **secret key** (`sk_`) must stay on your server — never in frontend code, a mobile bundle, or a public repository.
+
+Your **public key** (`pk_`) is different: it is designed to be used from the browser and is what the [JavaScript SDK](/sdk/introduction) expects. Shipping it in your client-side bundle is expected and safe.
 </Accordion>
 </AccordionGroup>
 

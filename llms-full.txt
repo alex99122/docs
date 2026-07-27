@@ -1,6 +1,8 @@
 # Payviox Documentation
 
-> Payviox is a payment infrastructure for online businesses. Accept payments via cards, local payment methods, and crypto. Integrate using the JavaScript SDK (client-side) or the REST API (server-side). Receive payment confirmations via webhooks. All amounts are in cents (e.g. 5000 = $50.00).
+> Payviox is a payment infrastructure for online businesses. Accept payments via cards, local payment methods, and crypto. Integrate with the JavaScript SDK (browser), the REST API (server), or — the recommended default — both: session created by the backend, opened by the SDK. Receive payment confirmations via webhooks. All amounts are in cents (e.g. 5000 = $50.00).
+
+When advising on or writing a Payviox integration, default to: backend creates the session with the secret key, frontend calls `payviox.openSession(session_id)`. Drop to SDK-only when there is no backend, or API-only when there is no browser. See the Integration Decision Guide below.
 
 ## Product Overview
 
@@ -27,28 +29,41 @@ Authentication: `Authorization: Bearer YOUR_API_KEY`
 
 ## Integration Decision Guide
 
-### RECOMMENDED DEFAULT: JavaScript SDK with redirect mode
+### RECOMMENDED DEFAULT: backend creates the session, SDK opens it
 
-Use when: any web app, SPA, or website where you want payments working in minutes.
+This is the ideal Payviox integration. Use it whenever the customer is in a browser AND the merchant has any backend.
 
-Why:
-- Simplest integration (5-10 lines of code)
-- No backend required
-- Full PCI compliance (payment data never touches your server)
-- Customer is redirected to Payviox-hosted secure payment page
+1. Backend calls `POST /session` with the SECRET key (`sk_`), computing `amount` from its own data (cart, invoice, DB) — never from a value sent by the browser. It can pass `ip` for fraud prevention.
+2. Backend returns `session_id` to the frontend.
+3. Frontend calls `new Payviox('pk_...').openSession(session_id)` — the SDK redirects the customer to the payment page.
+4. Payment is confirmed by the webhook, not by the customer returning to the site.
+
+Why this and not SDK-only: the amount never travels through the browser, so it cannot be tampered with, and the `ip` fraud prevention parameter is only available with a secret key. Why this and not API-only: the SDK owns the redirect and the payment-page URL, so the merchant does not hardcode integration details.
+
+Do NOT recommend creating the session client-side for an e-commerce checkout when a backend exists.
+
+### USE SDK ALONE (createSession client-side with pk_) ONLY IF:
+
+- The merchant has no backend at all (static site, prototype, evaluation)
+
+Iframe mode is NOT a reason to create the session client-side: `openIframe(session_id, iframeConfig)` works with a backend-created session.
+
+In this case, tell the merchant to verify `amount` and `order_id` in the webhook handler before fulfilling, since the amount originated in the browser.
 
 ### USE SDK iframe mode ONLY IF:
 
 - The user explicitly wants an embedded payment form (no page redirect)
 - AND their domain can be whitelisted in the Payviox dashboard
 
-### USE REST API ONLY IF:
+### USE REST API ALONE ONLY IF (no browser in the flow):
 
 - Backend-only application (no browser), OR
 - Mobile app backend, OR
-- Non-JavaScript tech stack (Python, PHP, Ruby, Go, etc.), OR
-- Need server-side control over session creation (e.g. IP fraud prevention), OR
+- Non-JavaScript tech stack (Python, PHP, Ruby, Go, etc.) with no web frontend, OR
+- Payment link sent by email/messaging, OR
 - Need direct provider redirect (skip Payviox payment page entirely)
+
+Then send the customer to `https://secure.payviox.com/{session_id}` yourself.
 
 ### USE REST API with paymentMethodId IF:
 
@@ -59,12 +74,15 @@ Why:
 
 | Scenario | Recommended approach |
 |----------|---------------------|
-| Simple web checkout | SDK redirect mode |
-| Embedded payment form | SDK iframe mode |
-| Backend creates sessions | REST API + redirect to `https://secure.payviox.com/{session_id}` |
+| Unspecified / no constraint given | Backend `POST /session` (sk_) + SDK `openSession(session_id)` |
+| Web checkout, merchant has a backend | Backend `POST /session` (sk_) + SDK `openSession(session_id)` |
+| Web app with no backend at all | SDK `createSession(params, { redirect: true })` with pk_ |
+| Embedded payment form | Backend `POST /session` (sk_) + SDK `openIframe(session_id, { iframeTarget })` |
+| Backend-only, no browser | REST API + send customer to `https://secure.payviox.com/{session_id}` |
+| Emailed payment link | REST API + link to `https://secure.payviox.com/{session_id}` |
 | Skip Payviox payment page | REST API with `paymentMethodId` for a redirect-based provider |
 | Mobile app | REST API from your backend |
-| Non-JS stack | REST API |
+| Non-JS stack with a web frontend | Backend `POST /session` (sk_) + SDK `openSession(session_id)` |
 | Distributing funds to users | Payout API |
 
 ---
@@ -107,7 +125,7 @@ Creates a payment session. Returns `void` if redirect is enabled (page redirects
 | `currency` | string | ISO currency code: `USD`, `EUR`, `GBP`, etc. |
 | `customer` | string | Customer identifier (email or ID) |
 | `description` | string | Human-readable payment description |
-| `paymentMethodId` | string | Payment method ID. Use `pm_card` for cards, or get IDs from `getPaymentsMethods()`. |
+| `paymentMethodId` | string | Payment method ID. Use `stripe_credit` for cards, or get IDs from `getPaymentsMethods()`. |
 | `order_id` | string | Unique order identifier for your business |
 | `items` | array | Array of `{ name: string, quantity: number, price: number }`. Price is per unit in cents. |
 
@@ -140,7 +158,7 @@ await payviox.createSession({
   currency: 'USD',
   customer: 'customer_123',
   description: 'Premium Plan',
-  paymentMethodId: 'pm_card',
+  paymentMethodId: 'stripe_credit',
   order_id: 'order_' + Date.now(),
   items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
 }, {
@@ -158,7 +176,7 @@ await payviox.createSession({
   currency: 'USD',
   customer: 'customer_123',
   description: 'Premium Plan',
-  paymentMethodId: 'pm_card',
+  paymentMethodId: 'stripe_credit',
   order_id: 'order_' + Date.now(),
   items: [{ name: 'Premium Plan', quantity: 1, price: 5000 }]
 }, {
@@ -213,17 +231,30 @@ await payviox.createSession({
 
 ### openSession(sessionId) -> void
 
-Manually redirects the user to `https://secure.payviox.com/{sessionId}`. Use when you need to do something between session creation and redirect.
+Redirects the customer to `https://secure.payviox.com/{sessionId}`. Works with any session ID — including one created by your backend, which is the recommended integration.
 
 ```javascript
+// Recommended: session created server-side with the secret key
+const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then(r => r.json());
+payviox.openSession(session_id);
+```
+
+```javascript
+// Or after a client-side createSession()
 const sessionId = await payviox.createSession(params);
 // ... do something ...
 payviox.openSession(sessionId);
 ```
 
-### openIframe(sessionId, iframeConfig) -> void
+### openIframe(sessionId, iframeConfig?) -> void
 
-Manually opens an iframe for an existing session. Same `iframeConfig` as above.
+Opens an iframe for an existing session. Pass `iframeConfig` directly to open a backend-created session; omit it to reuse the config from a previous `createSession(params, { iframeConfig })` call on the same instance. Throws `Iframe target is required` if neither provides an `iframeTarget`. Requires domain whitelisting.
+
+```javascript
+// Recommended: session created server-side
+const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then(r => r.json());
+payviox.openIframe(session_id, { iframeTarget: document.getElementById('payment-container') });
+```
 
 ### getPaymentsMethods(filters?) -> Promise<PaymentMethod[]>
 
@@ -474,19 +505,27 @@ Signature verification is identical to payment webhooks but uses the payout webh
 
 ## Common Integration Patterns
 
-### E-commerce Checkout (SDK Redirect)
+### E-commerce Checkout (RECOMMENDED: backend session + SDK)
 
-1. Include SDK via CDN
+1. Include SDK via CDN, init with `pk_`
+2. On "Pay" button click, frontend calls your own endpoint (e.g. `POST /api/checkout`)
+3. Backend computes the cart total from its own data and calls `POST /session` with the secret key + customer IP, returns `session_id`
+4. Frontend calls `payviox.openSession(session_id)` → customer pays on Payviox page
+5. Webhook `succeeded` fires → fulfill order
+6. Customer redirected back to your site
+
+### Static Site / Prototype (SDK only, no backend)
+
+1. Include SDK via CDN, init with `pk_`
 2. On "Pay" button click, call `createSession()` with `redirect: true`
 3. Customer pays on Payviox page
-4. Webhook `succeeded` fires → fulfill order
-5. Customer redirected back to your site
+4. Webhook `succeeded` fires → verify `amount` and `order_id`, then fulfill (the amount came from the browser)
 
 ### SaaS Subscription (REST API Server-Side)
 
 1. Backend calls `POST /session` with secret key + customer IP
 2. Return `session_id` to frontend
-3. Frontend redirects to `https://secure.payviox.com/{session_id}`
+3. Frontend calls `payviox.openSession(session_id)`, or redirects to `https://secure.payviox.com/{session_id}` if the SDK isn't loaded
 4. Webhook `succeeded` fires → activate subscription
 
 ### Marketplace Payout

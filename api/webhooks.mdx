@@ -67,7 +67,7 @@ Payviox sends webhooks with the following structure:
 ```
 
 <Info>
-  The `metadata` object contains the `integration_session_id` (always present) plus any custom metadata you provided when [creating the session](/api/endpoints/create-session#custom-metadata).
+  The `metadata` object contains the `integration_session_id` (always present) plus any custom metadata you provided when [creating the session](/api/endpoints/create-session).
 </Info>
 
 ### Payload Fields
@@ -92,7 +92,7 @@ Payviox sends webhooks with the following structure:
       The unique session identifier from Payviox (always present)
     </ParamField>
     <ParamField path="[custom_key]" type="any">
-      Any custom key-value pairs you provided in the `metadata` field when creating the session. See [Custom Metadata](/api/endpoints/create-session#custom-metadata) for details.
+      Any custom key-value pairs you provided in the `metadata` field when creating the session. See [Custom Metadata](/api/endpoints/create-session) for details.
     </ParamField>
   </Expandable>
 </ParamField>

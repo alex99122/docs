@@ -1,14 +1,73 @@
 ---
 title: "Complete Integration Examples"
-description: "Full code examples for SDK and API integration"
+description: "Full working code for the three Payviox setups: backend-created session handed to the SDK (recommended), SDK on its own, and REST API on its own. Includes webhook handlers in JS, PHP, and Python"
 icon: "file-code"
 ---
 
 ## Complete Integration Examples
 
-Here are complete, working examples of both SDK and API integration methods.
+Three complete setups. Option 1 is the [recommended integration](/quickstart/integration-methods) — use it if you have a backend.
 
-## Option 1: SDK Integration (JavaScript)
+## Option 1: Backend session + SDK — Recommended
+
+Your server creates the session (amount computed from your own data, `ip` passed for fraud prevention), the browser only receives a session ID.
+
+```javascript server.js — Express
+app.post('/api/checkout', async (req, res) => {
+  const cart = await getCart(req.user.id); // amount comes from YOUR data, not the browser
+
+  const response = await fetch('https://api.payviox.com/session', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}`, // sk_
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: cart.totalCents,
+      currency: 'USD',
+      customer: req.user.email,
+      description: `Order #${cart.id}`,
+      order_id: `order_${cart.id}`,
+      ip: req.ip, // fraud prevention — requires the secret key
+      items: cart.items.map((i) => ({ name: i.name, quantity: i.qty, price: i.priceCents })),
+    }),
+  });
+
+  if (!response.ok) return res.status(502).json({ error: 'Unable to start payment' });
+
+  const { session_id } = await response.json();
+  res.json({ session_id });
+});
+```
+
+```html checkout.html
+<button onclick="initiatePayment()">Pay Now</button>
+
+<script src="https://sdk.payviox.com/payviox.js"></script>
+<script>
+  const payviox = new Payviox('pk_live_your_key'); // public key — safe in the browser
+
+  async function initiatePayment() {
+    try {
+      const res = await fetch('/api/checkout', { method: 'POST' });
+      if (!res.ok) throw new Error('Payment could not be started');
+
+      const { session_id } = await res.json();
+      payviox.openSession(session_id); // SDK takes the customer to the payment page
+    } catch (error) {
+      alert('Payment failed: ' + error.message);
+    }
+  }
+</script>
+```
+
+<Check>
+The amount never travels through the browser, so it can't be tampered with — and you still get the SDK's redirect handling.
+</Check>
+
+## Option 2: SDK only (no backend)
+
+The SDK creates the session itself with your public key. Best for static sites, prototypes, and evaluating Payviox.
 
 Full HTML page with SDK integration:
 
@@ -34,7 +93,7 @@ Full HTML page with SDK integration:
           currency: 'USD',
           customer: 'customer_123',
           description: 'Premium Subscription',
-          paymentMethodId: 'pm_card',
+          paymentMethodId: 'stripe_credit',
           order_id: 'order_' + Date.now(),
           items: [{
             name: 'Premium Subscription',
@@ -57,9 +116,13 @@ Full HTML page with SDK integration:
 When you click "Pay Now", the SDK automatically creates a session and redirects to the secure payment page.
 </Check>
 
-## Option 2: API Integration (cURL)
+<Warning>
+Here the amount originates in the browser and can be modified by the customer. Always verify `amount` and `order_id` in your [webhook handler](/webhooks/integration) before fulfilling the order — or use Option 1.
+</Warning>
 
-Create a payment session using the REST API:
+## Option 3: REST API only (no browser)
+
+For backend services, mobile app backends, non-JavaScript stacks, and payment links sent by email.
 
 ```bash
 curl -X POST https://api.payviox.com/session \
@@ -70,7 +133,6 @@ curl -X POST https://api.payviox.com/session \
     "currency": "USD",
     "customer": "customer_123",
     "description": "Premium Subscription",
-    "paymentMethodId": "pm_card",
     "order_id": "order_12345",
     "items": [{
       "name": "Premium Subscription",
@@ -80,11 +142,19 @@ curl -X POST https://api.payviox.com/session \
   }'
 ```
 
-Then redirect the customer to the returned session URL.
+The response contains a `session_id`. Build the payment page URL from it and send the customer there — an HTTP redirect, a link in an email, wherever your product reaches them:
+
+```
+https://secure.payviox.com/{session_id}
+```
+
+<Tip>
+Passing an optional `paymentMethodId` sends the customer straight to that provider instead of the Payviox payment page. For redirect-based providers the response then contains a `redirect_url` — use it instead of building the URL above. See [POST /session](/api/endpoints/create-session).
+</Tip>
 
 ## Webhook Handler Examples
 
-Both integration methods require a webhook handler on your server.
+All three setups require a webhook handler on your server — it's what confirms the payment.
 
 <CodeGroup>
 

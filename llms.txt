@@ -2,24 +2,29 @@
 
 > Payment infrastructure for online businesses. JavaScript SDK and REST API to accept cards, local payment methods, and crypto with webhook notifications.
 
-Payviox provides two integration methods: a client-side JavaScript SDK (recommended for web apps) and a server-side REST API (for backends, mobile apps, and non-JS stacks). All amounts are in cents. Payments are confirmed asynchronously via webhooks with HMAC-SHA256 signature verification.
+RECOMMENDED INTEGRATION: create the payment session from the backend with the secret key (`sk_`), return the `session_id` to the frontend, and call the JavaScript SDK's `openSession(session_id)` in the browser to send the customer to the payment page. The amount is then computed server-side (never trust a browser-supplied amount) and the `ip` fraud prevention parameter is available.
+
+Two variations: SDK on its own with `createSession()` and the public key (`pk_`) when there is no backend, or when iframe mode is needed; REST API on its own when there is no browser in the flow (backend service, mobile app backend, non-JS stack, emailed payment link) — then send the customer to `https://secure.payviox.com/{session_id}`.
+
+All amounts are in cents. Payments are confirmed asynchronously via webhooks with HMAC-SHA256 signature verification — the redirect back to the merchant site is not a confirmation.
 
 ## Getting Started
 - [Overview](https://docs.payviox.com/quickstart/overview.md): Complete payment flow diagram and step-by-step from session creation to webhook confirmation
-- [Choose Integration Method](https://docs.payviox.com/quickstart/integration-methods.md): SDK vs API comparison table with decision criteria based on your tech stack
+- [Choose Integration Method](https://docs.payviox.com/quickstart/integration-methods.md): The recommended backend-session + SDK pattern with code, its two variations (SDK-only, API-only), and a comparison table
 - [Complete Examples](https://docs.payviox.com/quickstart/examples.md): Full working code for SDK redirect, REST API session creation, and webhook handlers in JS, PHP, and Python
 - [Security Best Practices](https://docs.payviox.com/quickstart/best-practices.md): API key management, webhook verification, PCI compliance, and error handling guidelines
 
-## JavaScript SDK
+## JavaScript SDK (recommended for the browser side of the integration)
 - [Installation](https://docs.payviox.com/sdk/installation.md): CDN script tag (`https://sdk.payviox.com/payviox.js`) or npm install `@payviox/sdk`
-- [Payviox Class](https://docs.payviox.com/sdk/api-reference/payviox-class.md): Constructor `new Payviox(apiKey)`, initialization with public API key (pk_ prefix)
+- [Payviox Class](https://docs.payviox.com/sdk/api-reference/payviox-class.md): Constructor `new Payviox(apiKey)`, initialization with public API key (pk_ prefix — designed to be exposed in the browser; never pass a sk_ key)
+- [openSession()](https://docs.payviox.com/sdk/api-reference/open-session.md): `openSession(session_id)` redirects the customer to the payment page for a session ID created anywhere — the browser half of the recommended backend-session pattern
 - [createSession()](https://docs.payviox.com/sdk/api-reference/create-session.md): Create payment session with amount, currency, items, paymentMethodId. Supports redirect mode, iframe mode, and direct provider redirect
 - [Redirect Mode](https://docs.payviox.com/sdk/integration/redirect.md): Full-page redirect to Payviox-hosted payment page. Simplest integration — `createSession(params, { redirect: true })`
 - [Iframe Mode](https://docs.payviox.com/sdk/integration/iframe.md): Embed payment form in your page via iframe. Requires domain whitelisting. Handles payviox:redirect (full-page redirect for providers) and payviox:close (dismiss iframe) postMessage events. Includes standalone integration without SDK
 
-## REST API
+## REST API (server side of the recommended pattern, and standalone when there is no browser)
 - [Authentication](https://docs.payviox.com/api/authentication.md): Bearer token auth with public key (pk_) for client-side or secret key (sk_) for server-side. Secret key enables IP fraud prevention parameter
-- [POST /session](https://docs.payviox.com/api/endpoints/create-session.md): Create payment session with amount, currency, items, order_id. Supports optional paymentMethodId for direct provider redirect and ip parameter for fraud prevention
+- [POST /session](https://docs.payviox.com/api/endpoints/create-session.md): Create payment session with amount, currency, items, order_id. Called from the backend in the recommended pattern. Optional paymentMethodId for direct provider redirect, optional ip parameter for fraud prevention
 - [GET /payments/methods](https://docs.payviox.com/api/endpoints/get-payment-methods.md): List available payment methods filtered by country and currency. Returns method IDs, names, fees, and geographic availability
 - [GET /balance](https://docs.payviox.com/api/endpoints/get-balance.md): Retrieve business balance and payout balance in cents. Requires secret API key
 
@@ -31,8 +36,7 @@ Payviox provides two integration methods: a client-side JavaScript SDK (recommen
 
 ## Optional
 - [Payment Method IDs](https://docs.payviox.com/sdk/api-reference/payment-methods.md): Understanding and using payment method identifiers with getPaymentsMethods()
-- [openSession()](https://docs.payviox.com/sdk/api-reference/open-session.md): Manual redirect helper for deferred navigation to payment page
-- [openIframe()](https://docs.payviox.com/sdk/api-reference/open-iframe.md): Manual iframe helper for deferred iframe embedding
+- [openIframe()](https://docs.payviox.com/sdk/api-reference/open-iframe.md): `openIframe(session_id, iframeConfig?)` embeds the payment page in an iframe. Accepts the config directly, so it works with a backend-created session; falls back to the config from a prior createSession(). Requires domain whitelisting
 - [getPaymentsMethods()](https://docs.payviox.com/sdk/api-reference/get-payments-methods.md): SDK method to retrieve available payment methods with currency/country filters
 - [Payout API Introduction](https://docs.payviox.com/api/payout/introduction.md): Distribute funds to users via gift cards, crypto, and PayPal
 - [Payout Authentication](https://docs.payviox.com/api/payout/authentication.md): Bearer token for business ops, hash-based auth for payout users

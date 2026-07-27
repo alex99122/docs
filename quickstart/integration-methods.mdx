@@ -1,104 +1,153 @@
 ---
 title: "Choose Your Integration Method"
-description: "Choose between JavaScript SDK (frontend, 5-10 min setup, redirect or iframe mode) and REST API (backend, any language, full control). Decision guide based on tech stack and requirements"
+description: "The recommended Payviox integration: create the payment session from your backend with the secret key, then hand the session ID to the JavaScript SDK in the browser. Also covers SDK-only (no backend) and API-only (no browser) setups, with a comparison table"
 icon: "code-compare"
 ---
 
 ## Choose Your Integration Method
 
-Payviox offers two ways to integrate payments. Choose the one that best fits your technical stack and requirements.
+<Note>
+**The recommended integration is both at once.** Create the payment session from your backend with your secret key (`sk_`), then hand the returned `session_id` to the [JavaScript SDK](/sdk/introduction) in the browser and let it take the customer to the payment page. Your server stays in control of the amount and gets the `ip` fraud prevention parameter; the SDK handles the redirect. Everything below is a variation on that.
+</Note>
+
+## Recommended: backend session + SDK
+
+This is how a typical checkout should work.
+
+<Steps>
+<Step title="Your backend creates the session">
+Compute the amount from your own data — never from a value sent by the browser — and call `POST /session` with your **secret key**. Return the `session_id` to your frontend.
+
+```javascript Node.js — your server
+const response = await fetch('https://api.payviox.com/session', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}`, // sk_
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 1000, // cents — computed server-side from your cart
+    currency: 'USD',
+    customer: 'customer_123',
+    description: 'Order #12345',
+    order_id: 'order_12345',
+    ip: req.ip, // fraud prevention, unlocked by the secret key
+    items: [{ name: 'Product A', quantity: 2, price: 500 }],
+  }),
+});
+
+const { session_id } = await response.json();
+```
+</Step>
+
+<Step title="The SDK takes over in the browser">
+Initialize the SDK with your **public key** (`pk_`) and call [`openSession()`](/sdk/api-reference/open-session) with the session ID your backend returned.
+
+```javascript Browser
+const payviox = new Payviox('pk_live_your_key');
+
+const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then((r) => r.json());
+
+payviox.openSession(session_id); // redirects to the secure payment page
+```
+</Step>
+
+<Step title="Confirm with a webhook">
+The customer comes back to your site after paying, but the payment is confirmed by the [webhook](/webhooks/integration) — that's what you fulfill the order on, not the redirect.
+</Step>
+</Steps>
+
+<Tip>
+Why not create the session from the browser? You can (see below), but then the amount comes from client-side code and can be tampered with, and you lose the `ip` parameter. If you have a backend, use it.
+</Tip>
+
+## The two variations
 
 <CardGroup cols={2}>
-<Card title="SDK Integration" icon="code" href="/sdk/introduction">
-### Best for: Frontend developers
+<Card title="SDK only — no backend" icon="code" href="/sdk/introduction">
+The SDK creates the session itself with your public key via [`createSession()`](/sdk/api-reference/create-session), then redirects or opens an iframe.
 
-Use our JavaScript SDK for quick integration with just a few lines of code.
+**Use it when:**
+- You have no backend (static site, prototype)
+- You're evaluating Payviox and want a payment working in 5 minutes
+- You want **iframe mode**, which today requires `createSession()` client-side
 
-**Advantages:**
-- ✅ Quick setup (5-10 minutes)
-- ✅ No backend required initially
-- ✅ Built-in error handling
-- ✅ Automatic redirects
-- ✅ TypeScript support
+**Trade-off:** the amount originates in the browser. Always verify `amount` and `order_id` in your webhook handler before fulfilling.
 
-**Integration modes:**
-- **Redirect**: Full-page redirect to secure payment page
-- **Iframe**: Embedded payment form on your website
-
-[Get started with SDK →](/sdk/installation)
+[SDK reference →](/sdk/introduction)
 </Card>
 
-<Card title="API Integration" icon="server" href="/api/introduction">
-### Best for: Backend developers
+<Card title="REST API only — no browser" icon="server" href="/api/introduction">
+Your server creates the session and sends the customer to `https://secure.payviox.com/{session_id}` itself — a plain HTTP redirect, or a link in an email.
 
-Use our REST API for full control over the payment flow and custom integrations.
+**Use it when:**
+- There is no browser to run the SDK in (backend service, cron, worker)
+- You're on a mobile app backend
+- You're on a non-JavaScript stack (PHP, Python, Ruby, Go…)
+- You send payment links by email or messaging
 
-**Advantages:**
-- ✅ Full server-side control
-- ✅ Custom payment flows
-- ✅ Works with any programming language
-- ✅ Advanced customization options
-- ✅ Webhook integration
-
-**Use cases:**
-- Server-side applications
-- Mobile app backends
-- Custom checkout experiences
-- Multi-platform integrations
-
-[Get started with API →](/api/introduction)
+[API reference →](/api/introduction)
 </Card>
 </CardGroup>
 
 ## Quick Comparison
 
-| Feature | SDK Integration | API Integration |
-|---------|----------------|-----------------|
-| **Setup time** | 5-10 minutes | 15-30 minutes |
-| **Technical level** | Beginner-friendly | Intermediate |
-| **Code location** | Frontend (JavaScript) | Backend (any language) |
-| **Customization** | Standard flows | Fully customizable |
-| **PCI compliance** | Automatic | Automatic |
-| **Webhooks required** | Recommended | Required |
-| **Best for** | Quick integrations, SPAs | Complex flows, mobile apps |
+| | Backend session + SDK (recommended) | SDK only | API only |
+|---|---|---|---|
+| **Amount computed** | Server-side | Browser | Server-side |
+| **`ip` fraud parameter** | ✅ Available | ❌ Auto-captured only | ✅ Available |
+| **Redirect handling** | SDK | SDK | Your code |
+| **Iframe mode** | ✅ Supported | ✅ Supported | ❌ |
+| **Setup time** | 15-20 minutes | 5-10 minutes | 15-30 minutes |
+| **Needs a browser** | Yes | Yes | No |
+| **Webhooks** | Required | Required | Required |
+
+<Note>
+**Want an embedded iframe instead of a redirect?** Pass your iframe configuration straight to [`openIframe()`](/sdk/api-reference/open-iframe) — it works with a backend-created session exactly like `openSession()`:
+
+```javascript
+payviox.openIframe(session_id, { iframeTarget: document.getElementById('payment-container') });
+```
+
+Iframe mode requires your domain to be whitelisted in the dashboard. Note that redirect-based providers can't render in an iframe: selecting one navigates the full page to the provider. See [Iframe integration](/sdk/integration/iframe).
+</Note>
 
 ## Which Should You Choose?
 
 <AccordionGroup>
-<Accordion title="Choose SDK if...">
-- You want the fastest integration (5-10 minutes)
-- You're a frontend developer or working on a simple website
-- You prefer minimal backend code
-- You want automatic redirect handling
-- You're building a single-page application (SPA)
+<Accordion title="You have a backend (recommended path)">
+Create the session server-side with `sk_`, hand the `session_id` to the SDK, redirect with `openSession()`. This is the path to follow unless something below applies.
 </Accordion>
 
-<Accordion title="Choose API if...">
-- You need full control over the payment flow
-- You're building a mobile app backend
-- You want to customize every aspect of the integration
-- You're working with a language other than JavaScript
-- You need to integrate with existing backend systems
+<Accordion title="You have no backend at all">
+Use the SDK on its own with `createSession()` and your `pk_` key. Add server-side session creation later when you have somewhere to put it — the frontend change is a two-line swap to `openSession()`.
+</Accordion>
+
+<Accordion title="You need an embedded iframe">
+Same as the recommended path, but call `openIframe(session_id, { iframeTarget })` instead of `openSession(session_id)`. Without a backend, use `createSession()` with `iframeMode` from the browser. Either way, whitelist your domain in the dashboard. See [Iframe integration](/sdk/integration/iframe).
+</Accordion>
+
+<Accordion title="You have no browser in the flow">
+Use the REST API on its own: create the session, then send the customer to `https://secure.payviox.com/{session_id}` — by HTTP redirect, email link, or however your product reaches them.
 </Accordion>
 </AccordionGroup>
 
 ## Next Steps
 
 <CardGroup cols={2}>
-<Card title="SDK Integration" icon="code" href="/sdk/introduction">
-Get started with the JavaScript SDK
+<Card title="Complete Examples" icon="file-code" href="/quickstart/examples">
+Full working code for each of the three setups
 </Card>
 
-<Card title="API Integration" icon="server" href="/api/introduction">
-Get started with the REST API
+<Card title="POST /session" icon="server" href="/api/endpoints/create-session">
+Create a session from your backend
 </Card>
 
-<Card title="Integration Examples" icon="file-code" href="/quickstart/examples">
-See complete code examples
+<Card title="openSession()" icon="arrow-up-right-from-square" href="/sdk/api-reference/open-session">
+Hand a session ID to the SDK
 </Card>
 
-<Card title="Webhooks" icon="webhook" href="/quickstart/webhooks">
-Learn about payment notifications
+<Card title="Webhooks" icon="webhook" href="/webhooks/integration">
+Confirm payments — required in every setup
 </Card>
 </CardGroup>
-

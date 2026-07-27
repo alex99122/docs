@@ -8,6 +8,10 @@ description: 'Create a payment session with amount, currency, and items. Support
 
 Creates a new payment session for your customer. The session ID can be used to redirect the customer to the payment page or to fetch available payment methods.
 
+<Tip>
+  **Recommended flow:** call this endpoint from your backend with your secret key (so the amount is computed server-side and you can pass `ip`), return the `session_id` to your frontend, and let the SDK's [`openSession()`](/sdk/api-reference/open-session) take the customer to the payment page. If there's no browser in your flow, send the customer to `https://secure.payviox.com/{session_id}` yourself. See [Choose your integration method](/quickstart/integration-methods).
+</Tip>
+
 <Note>
   Payment sessions expire after 24 hours if no payment is initiated.
 </Note>
@@ -660,11 +664,18 @@ After creating a session:
 
 <CardGroup cols={2}>
   <Card
-    title="Redirect Customer"
+    title="Open the session with the SDK"
     icon="arrow-up-right-from-square"
-    href="/sdk/integration/redirect"
+    href="/sdk/api-reference/open-session"
   >
-    Redirect the customer to the payment page using the session ID
+    Recommended: hand the session ID to `openSession()` in the browser
+  </Card>
+  <Card
+    title="Redirect without the SDK"
+    icon="link"
+    href="/quickstart/integration-methods"
+  >
+    Send the customer to `https://secure.payviox.com/{session_id}` yourself
   </Card>
   <Card
     title="Get Payment Methods"

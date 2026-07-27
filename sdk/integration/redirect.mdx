@@ -50,7 +50,7 @@ async function processPayment() {
       currency: 'USD',
       customer: 'customer_abc123',
       description: 'Monthly subscription',
-      paymentMethodId: 'pm_card',
+      paymentMethodId: 'stripe_credit',
       order_id: 'order_2024_001',
       items: [
         {
@@ -83,7 +83,7 @@ The `createSession()` method accepts two parameter objects:
 | `currency` | `string` | ✅ Required | Three-letter ISO currency code. Example: `'USD'`, `'EUR'`, `'GBP'` |
 | `customer` | `string` | ✅ Required | Customer identifier. Can be an email, customer ID, or any unique identifier. Example: `'customer_abc123'` or `'user@example.com'` |
 | `description` | `string` | ✅ Required | Human-readable description of the payment. Example: `'Premium subscription - Monthly'` |
-| `paymentMethodId` | `string` | ✅ Required | Payment method identifier. Use `'pm_card'` for card payments. Get available methods with `getPaymentsMethods()`. |
+| `paymentMethodId` | `string` | Optional | Forces a specific payment method. Use `'stripe_credit'` for card payments, or omit it to let the customer choose on the payment page. Get available methods with `getPaymentsMethods()`. |
 | `order_id` | `string` | ✅ Required | Unique identifier for this order. Must be unique across all your transactions. Example: `'order_2024_001'` or `'order_' + Date.now()` |
 | `items` | `array` | ✅ Required | Array of items being purchased. Each item must contain: `name` (string), `quantity` (number), `price` (number in cents). |
 

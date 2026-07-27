@@ -1,11 +1,15 @@
 ---
 title: 'API Introduction'
-description: 'Build powerful payment integrations with the Payviox REST API'
+description: 'Build payment integrations server-side with the Payviox REST API — for backend-only services, mobile app backends, and non-JavaScript stacks. For browser-based integrations, the JavaScript SDK is recommended'
 ---
 
 ## Welcome to Payviox API
 
 The Payviox REST API allows you to create payment sessions and manage payment methods programmatically. Our API is designed to be simple, secure, and easy to integrate.
+
+<Note>
+  **Your customer is in a browser?** The recommended setup is to create the session here with your secret key, then hand the returned `session_id` to the [JavaScript SDK](/sdk/introduction), which takes the customer to the payment page. See [Choose your integration method](/quickstart/integration-methods). Use the REST API on its own when there's no browser in the flow — backend services, mobile app backends, non-JavaScript stacks, or payment links sent by email.
+</Note>
 
 <Note>
   **Try it now!** Each endpoint includes an interactive playground where you can test API calls directly from your browser using your API key.
@@ -69,6 +73,16 @@ All API requests should be made to:
 ```
 https://api.payviox.com
 ```
+
+## Payment page URL
+
+Once you have a `session_id`, the hosted payment page for it is:
+
+```
+https://secure.payviox.com/{session_id}
+```
+
+Send the customer there to pay — via the SDK's [`openSession()`](/sdk/api-reference/open-session), an HTTP redirect, or a link in an email. If you passed a `paymentMethodId` for a redirect-based provider, the session response contains a `redirect_url` instead; use that.
 
 ## Rate Limits
 

@@ -89,9 +89,9 @@ Go to **Settings** > **API Keys** in the sidebar menu.
 <Step title="Create or copy token">
 Click **Create new API key** or copy an existing key.
 
-<Warning>
-Never expose your API token in client-side code in production. Use it only for server-side operations or in secure environments.
-</Warning>
+<Note>
+Use your **public key** (`pk_`) with the SDK — it's built to be exposed in the browser. Your **secret key** (`sk_`) must never appear in client-side code: keep it on your server. See [Authentication](/api/authentication).
+</Note>
 </Step>
 </Steps>
 

@@ -1,12 +1,16 @@
 ---
 title: "Payviox JavaScript SDK"
-description: "Integrate payment processing into your web application with the Payviox JavaScript SDK"
+description: "The recommended way to integrate Payviox: the JavaScript SDK handles session creation, redirect and iframe modes, and payment method discovery from your web application"
 icon: "code"
 ---
 
 ## Overview
 
 The Payviox JavaScript SDK provides a simple and secure way to integrate payment processing into your web applications. With support for both redirect and iframe integration modes, you can create seamless payment experiences for your customers.
+
+<Note>
+**The SDK is the recommended way to bring your customer to the payment page.** In the recommended setup your backend creates the session (with your secret key), and the SDK takes it from there in the browser via [`openSession()`](/sdk/api-reference/open-session) — see [Choose your integration method](/quickstart/integration-methods). If you have no backend, the SDK can also create the session itself with [`createSession()`](/sdk/api-reference/create-session).
+</Note>
 
 ## Key features
 
@@ -40,7 +44,7 @@ const sessionId = await payviox.createSession({
   currency: 'USD',
   customer: 'customer_123',
   description: 'Order #12345',
-  paymentMethodId: 'pm_card',
+  paymentMethodId: 'stripe_credit',
   order_id: 'order_12345',
   items: [
     {

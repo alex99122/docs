@@ -9,7 +9,7 @@ icon: "credit-card"
 The `paymentMethodId` parameter allows you to specify which payment method should be used for a transaction. This gives you control over the payment experience and enables features like forcing specific payment methods, building custom selectors, or pre-selecting based on user preferences.
 
 <Tip>
-The `paymentMethodId` is required when creating a payment session. Use `getPaymentsMethods()` to retrieve available payment method IDs.
+`paymentMethodId` is **optional** when creating a payment session — omit it and the customer picks from every method available for their country and currency on the payment page. Use `getPaymentsMethods()` to retrieve available payment method IDs.
 </Tip>
 
 ## How it works
@@ -85,7 +85,7 @@ When you call `getPaymentsMethods()`, each payment method object contains the fo
 
 | Property | Type | Description | Example |
 |----------|------|-------------|---------|
-| `id` | `string` | Unique identifier used as `paymentMethodId` in `createSession()` | `'pm_card'`, `'pm_bank_transfer'` |
+| `id` | `string` | Unique identifier used as `paymentMethodId` in `createSession()` | `'stripe_credit'`, `'pm_bank_transfer'` |
 | `name` | `string` | Human-readable name to display to users | `'Credit Card'`, `'Bank Transfer'` |
 | `type` | `string` | Payment type category | `'card'`, `'bank_transfer'`, `'wallet'` |
 | `currencies` | `string[]` | List of supported currency codes (ISO 4217) | `['USD', 'EUR', 'GBP']` |

@@ -1,38 +1,52 @@
 ---
 title: "openSession()"
-description: "Manually redirect the user to the payment page"
+description: "Redirect the customer to the payment page for a given session ID. Key method of the recommended integration: your backend creates the session, the SDK opens it"
 icon: "arrow-up-right-from-square"
 ---
 
-Manually redirects the user to the payment page for a given session ID.
+Redirects the customer to the payment page for a given session ID.
 
 ```typescript
 openSession(sessionId: string): void
 ```
 
+<Note>
+This is the method behind the [recommended integration](/quickstart/integration-methods): your backend creates the session with your secret key, and the SDK opens it in the browser. The session ID can come from anywhere — a `createSession()` call, or your own API.
+</Note>
+
 ## Parameters
 
 <ParamField path="sessionId" type="string" required>
-The session ID returned from `createSession()`.
+The session ID to open. Returned by [`POST /session`](/api/endpoints/create-session) or by [`createSession()`](/sdk/api-reference/create-session).
 
 ```javascript
-const sessionId = 'ses_abc123...';
-payviox.openSession(sessionId);
+payviox.openSession('ses_abc123...');
 ```
 </ParamField>
 
 ## Examples
 
-```javascript
-const payviox = new Payviox('your_api_token');
+### Recommended: session created by your backend
 
-// Create a session
+```javascript
+const payviox = new Payviox('pk_live_your_key');
+
+// Your backend computes the amount and calls POST /session with your secret key
+const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then((r) => r.json());
+
+payviox.openSession(session_id);
+```
+
+### Session created by the SDK
+
+```javascript
+const payviox = new Payviox('pk_live_your_key');
+
 const sessionId = await payviox.createSession({
   amount: 5000,
   currency: 'USD',
   customer: 'user@example.com',
   description: 'Order payment',
-  paymentMethodId: 'pm_card',
   order_id: 'order_123',
   items: [{ name: 'Product', quantity: 1, price: 5000 }]
 });
@@ -45,6 +59,5 @@ payviox.openSession(sessionId);
 ```
 
 <Tip>
-Use this method when you need to perform actions between session creation and redirection.
+Use this method whenever you need to do something between session creation and redirection — or when the session wasn't created in the browser at all.
 </Tip>
-

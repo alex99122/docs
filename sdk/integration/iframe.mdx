@@ -34,9 +34,25 @@ Listen for completion events via postMessage API to handle successful payments.
 
 ## Basic implementation
 
-### Minimal iframe integration
+### Recommended: session created by your backend
 
-The simplest iframe integration requires just a target container:
+Your server creates the session with your secret key, and the SDK embeds it — the [recommended integration](/quickstart/integration-methods), in iframe form:
+
+```javascript
+const payviox = new Payviox('pk_live_your_key');
+
+const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then((r) => r.json());
+
+payviox.openIframe(session_id, {
+  iframeTarget: document.getElementById('payment-container'),
+  width: '100%',
+  height: '500px'
+});
+```
+
+### Minimal iframe integration (no backend)
+
+The SDK creates the session itself; it only needs a target container:
 
 ```javascript
 const payviox = new Payviox('your_api_token');
@@ -47,7 +63,7 @@ await payviox.createSession({
   currency: 'USD',
   customer: 'customer_abc123',
   description: 'Order #12345',
-  paymentMethodId: 'pm_card',
+  paymentMethodId: 'stripe_credit',
   order_id: 'order_12345',
   items: [
     {

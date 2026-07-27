@@ -51,7 +51,7 @@ async function initiatePayment() {
       currency: 'USD',
       customer: 'customer_123456',
       description: 'Order #12345',
-      paymentMethodId: 'pm_card',
+      paymentMethodId: 'stripe_credit',
       order_id: 'order_12345',
       items: [
         {
@@ -111,7 +111,7 @@ async function initiatePayment() {
       currency: 'USD',
       customer: 'customer_' + Date.now(),
       description: 'Premium Subscription',
-      paymentMethodId: 'pm_card',
+      paymentMethodId: 'stripe_credit',
       order_id: 'order_' + Date.now(),
       items: [
         {

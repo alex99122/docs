@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Complete Payviox payment flow: session creation, customer redirect to secure payment page, payment processing, webhook notification, and customer return. Includes sequence diagram"
+description: "Complete Payviox payment flow: session creation, customer redirect to secure payment page, payment processing, webhook notification, and customer return. The JavaScript SDK is the recommended integration method. Includes sequence diagram"
 icon: "lightbulb"
 ---
 
@@ -11,6 +11,10 @@ Payviox provides a simple and flexible payment infrastructure. You can integrate
 <Info>
 **New to Payviox?** This guide explains the complete payment flow from start to finish.
 </Info>
+
+<Note>
+**Recommended integration:** create the payment session from your backend with your secret key, then hand the `session_id` to the [JavaScript SDK](/sdk/introduction) in the browser — it takes the customer to the payment page for you. See [Choose your integration method](/quickstart/integration-methods) for this pattern and its two variations (SDK on its own, API on its own).
+</Note>
 
 ## Payment Flow
 
@@ -85,7 +89,7 @@ Compare SDK vs API integration
 Learn about payment notifications
 </Card>
 
-<Card title="SDK Integration" icon="code" href="/sdk/introduction">
+<Card title="SDK Integration — Recommended" icon="code" href="/sdk/introduction">
 Start with the JavaScript SDK
 </Card>
 
