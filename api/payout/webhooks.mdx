@@ -45,6 +45,11 @@ You can subscribe to the following payout webhook events:
 | `payout.succeeded` | Payout confirmed and delivered | Confirm delivery to the recipient |
 | `payout.failed` | Payout failed | Contact support or retry |
 | `payout.rejected` | Payout was rejected | Inform the recipient of the rejection |
+| `payout.reversed` | A payout that had already succeeded was reversed afterwards | Undo whatever you did on `payout.succeeded` — the funds are back in your payout balance |
+
+<Note>
+  `payout.reversed` is the only event that can arrive **after** `payout.succeeded`. If you credit recipients as soon as a payout succeeds, handle this event to roll that credit back.
+</Note>
 
 <Warning>
   Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
@@ -54,7 +59,7 @@ You can subscribe to the following payout webhook events:
 
 All payout webhooks follow the **same root layout**: amounts, `metadata`, `type`, `provider`, your internal `order_id`, `recipient`, and **exactly one extra object** whose **JSON key matches `provider`** (`paypal`, `crypto`, or any future rail). That object carries provider-specific identifiers and details only—no duplicate amounts.
 
-Some **event types** add optional root fields (e.g. `reason` on `payout.rejected` when an admin note exists). **Omitted fields** are not sent.
+Some **event types** add optional root fields (e.g. `reason` on `payout.rejected` and `payout.reversed` when an admin note exists). **Omitted fields** are not sent.
 
 ### Reference payload
 

@@ -479,6 +479,7 @@ Separate URL and token from payment webhooks. Configure in Dashboard > Payout > 
 | `payout.succeeded` | Payout delivered |
 | `payout.failed` | Payout failed |
 | `payout.rejected` | Payout rejected (may include `reason` field) |
+| `payout.reversed` | Previously succeeded payout reversed afterwards; funds returned to payout balance (may include `reason` field). Only event that can follow `payout.succeeded` — roll back any credit granted on success. |
 
 ### Payload Structure
 
