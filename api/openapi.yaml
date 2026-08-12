@@ -192,7 +192,10 @@ components:
         payment_method:
           type: string
           nullable: true
-          description: Payment method identifier (e.g., stripe_credit, paypal)
+          description: >-
+            Method the buyer paid with, without the provider prefix — read it together
+            with `provider` (e.g., credit or apple_pay with provider stripe, bitcoin with
+            provider uniwire, pix_br with provider payssion)
         provider:
           type: string
           nullable: true
@@ -319,7 +322,7 @@ paths:
                     price: 10000
                 metadata:
                   user_id: "usr_123"
-                payment_method: stripe_credit
+                payment_method: credit
                 provider: stripe
                 created_at: "2026-05-04T10:30:00.000000Z"
                 customer_details:

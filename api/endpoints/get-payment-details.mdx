@@ -77,7 +77,10 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
 </ResponseField>
 
 <ResponseField name="payment_method" type="string">
-  Payment method identifier (e.g., `stripe_credit`, `paypal`, `stripe_apple_pay`).
+  Method the buyer paid with, without the provider prefix — read it together with
+  `provider`. Examples: `credit`, `apple_pay` (`provider: "stripe"`), `bitcoin`
+  (`provider: "uniwire"`), `pix_br` (`provider: "payssion"`). Same value as the
+  `payment_method` of the webhook sent for this payment.
 </ResponseField>
 
 <ResponseField name="provider" type="string">
@@ -262,7 +265,7 @@ func main() {
     "user_id": "usr_123",
     "plan": "premium"
   },
-  "payment_method": "stripe_credit",
+  "payment_method": "credit",
   "provider": "stripe",
   "created_at": "2026-05-04T10:30:00.000000Z",
   "customer_details": {

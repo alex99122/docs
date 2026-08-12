@@ -72,7 +72,7 @@ Payviox sends webhooks with the following structure:
       "price": 10000
     }
   ],
-  "payment_method": "card",
+  "payment_method": "apple_pay",
   "customer": {
     "name": "John Doe",
     "email": "john@example.com",
@@ -146,7 +146,10 @@ Payviox sends webhooks with the following structure:
 </ParamField>
 
 <ParamField path="payment_method" type="string">
-  Specific payment method used (e.g., card, bank_transfer)
+  Method the buyer actually paid with, without the provider prefix — read it together
+  with `provider`. Examples: `credit`, `apple_pay`, `google_pay`, `blik`, `wechat_pay`
+  with `provider: "stripe"`; `bitcoin`, `usdt_trc20` with `provider: "uniwire"`;
+  `pix_br`, `kakaopay_kr` with `provider: "payssion"`.
 </ParamField>
 
 <ParamField path="customer" type="object">
