@@ -413,7 +413,7 @@ Payviox sends HTTP POST webhooks to your configured URL when payment events occu
   "provider": "stripe",
   "order_id": "order_123456",
   "items": [{ "name": "Premium", "quantity": 1, "price": 10000 }],
-  "payment_method": "card",
+  "payment_method": "apple_pay",
   "customer": {
     "name": "John Doe",
     "email": "john@example.com",
@@ -423,7 +423,7 @@ Payviox sends HTTP POST webhooks to your configured URL when payment events occu
 }
 ```
 
-The `customer` object is optional and only present when data was collected by the provider. The `fees` field represents additional fees the customer pays on top of the amount.
+The `payment_method` field is the method actually used, without its provider prefix — read it together with `provider` (`credit`, `apple_pay`, `wechat_pay` with `stripe`; `bitcoin`, `usdt_trc20` with `uniwire`; `pix_br` with `payssion`). The `customer` object is optional and only present when data was collected by the provider. The `fees` field represents additional fees the customer pays on top of the amount.
 
 ### Signature Verification
 
