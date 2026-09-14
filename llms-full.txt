@@ -67,7 +67,7 @@ Then send the customer to `https://secure.payviox.com/{session_id}` yourself.
 
 ### USE REST API with paymentMethodId IF:
 
-- You want to bypass the Payviox payment page and send the customer directly to a specific payment provider (Zen, Nicepay, PayPal, Payssion, Pallapay, Crypto.com)
+- You want to bypass the Payviox payment page and send the customer directly to a specific payment provider (Zen, Nicepay, PayPal, Payssion, Pallapay, Skrill, Crypto.com)
 - The API returns a `redirect_url` instead of just a `session_id`
 
 ### Decision Summary
@@ -566,6 +566,7 @@ These providers support skipping the Payviox payment page when `paymentMethodId`
 | PayPal | `paypal` |
 | Payssion | Various local methods |
 | Pallapay | Crypto |
+| Skrill | Skrill wallet and cards (`skrill`) |
 | Crypto.com | `cryptocom` |
 
 Use `GET /payments/methods` to discover available IDs for your account.
