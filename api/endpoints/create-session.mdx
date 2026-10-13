@@ -739,6 +739,14 @@ The response is the usual `{ "session_id": "..." }` (201). The subscription itse
     }
     ```
 
+    **Stripe not configured** — a subscription-capable method is active but your Stripe publishable or secret key is missing:
+
+    ```json
+    {
+      "subscription": ["Stripe is not fully configured on your account (public and secret keys). Configure it in your dashboard, then retry."]
+    }
+    ```
+
     **Incompatible `paymentMethodId`** — the forced method can't carry a subscription:
 
     ```json

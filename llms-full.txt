@@ -333,6 +333,7 @@ Subscription-specific errors:
 - 403 `{ "error": "subscription_requires_secret_key", "message": "..." }` — `subscription` sent with a pk_ key.
 - 400 `{ "subscription": ["..."] }` — invalid terms (unknown interval, interval_count out of range), or no subscription-capable method active (card / Apple Pay / Google Pay via Stripe).
 - 400 `{ "paymentMethodId": ["..."] }` — forced method can't carry a subscription.
+- 400 `{ "subscription": ["Stripe is not fully configured on your account (public and secret keys)..."] }` — Stripe keys missing.
 - 400 `{ "error": "subscription_setup_incomplete", "message": "...", "missing_events": ["invoice.paid", ...] }` — the merchant's Stripe webhook endpoint `https://api.payviox.com/payment/stripe/webhook` is missing or lacks renewal events. Result cached up to 1 hour.
 
 After creating a session, redirect the customer to: `https://secure.payviox.com/{session_id}`
@@ -377,8 +378,8 @@ Requires secret API key. Returns status, `amount`, `fees`, `net_amount`, currenc
 |----------|---------|
 | `GET /subscriptions` | List. Query: `status` (`active`, `past_due`, `canceled`, `canceling` = scheduled to end), `search` (ID, customer, email, order_id), `customer` (exact), `page`, `per_page` (default 20, max 100), `sort_by` (`created_at` default, `current_period_end`, `amount`), `sort_order` (`desc` default, `asc`). Returns `{ data: [Subscription], total, page, per_page }` |
 | `GET /subscriptions/{id}` | One Subscription. 404 `{ "error": "subscription_not_found" }` |
-| `POST /subscriptions/{id}/cancel` | Body `{ "at_period_end": true }` (default true: ends at `current_period_end`, undoable; false: ends now, no refund). Returns Subscription. 409 already canceled, 502 Stripe refused, 503 Stripe unreachable (retry), 400 non-boolean |
-| `POST /subscriptions/{id}/resume` | Undo a scheduled cancellation. Returns Subscription. 409 if already canceled |
+| `POST /subscriptions/{id}/cancel` | Body `{ "at_period_end": true }` (default true, also when omitted/null/"": ends at `current_period_end`, undoable; false: ends now and voids the subscription's unpaid Stripe invoices, no refund). Returns Subscription. 409 already canceled (or changed meanwhile: retry), 502 Stripe refused, 503 Stripe unreachable (retry), 400 non-boolean |
+| `POST /subscriptions/{id}/resume` | Undo a cancellation scheduled on the merchant side (`cancel_requested_by` `api`, `manager`, or `null` = scheduled from the Stripe dashboard). 403 if scheduled by the customer (`payer`: only they can resume, from the management link) or Payviox (`admin`/`system`: contact support) — the customer's cancellation withdraws consent; renewing anyway invites disputes. Resuming a customer's cancellation in the Stripe dashboard is re-applied by Payviox. Returns Subscription. 409 if already canceled |
 
 All four endpoints: 401 `{ "error": "Unauthorized" }` without a valid sk_ key, 404 `{ "error": "subscription_not_found", "message": "..." }` for an unknown ID or one of another business. Cancel/resume failures (409, 502, 503): `{ "error": "subscription_update_failed", "message": "..." }`. Invalid cancel body (400): `{ "at_period_end": ["at_period_end must be a boolean."] }`. Status filter: `active` includes subscriptions scheduled to end; `canceling` = active or past_due with `cancel_at_period_end: true`.
 
@@ -407,6 +408,7 @@ Subscription object:
   "cancel_at_period_end": false,
   "canceled_at": null,
   "canceled_by": null,
+  "cancel_requested_by": null,
   "cancellation_reason": null,
   "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "management_url": "https://secure.payviox.com/subscription/<token>",
@@ -418,7 +420,7 @@ Subscription object:
 - `amount`: merchant price per period. `unit_amount`: charged to the customer each renewal, fixed at signup (includes customer fees, excludes one-time add-on fees of the first payment). Payviox fees apply to each renewal at the signup rates.
 - `payment_method`: `credit`, `apple_pay` or `google_pay`. `provider_subscription_id`: Stripe `sub_...` on the merchant's account, `null` until created (about a minute after signup).
 - `cycles_count`: cycles started, signup included (failed renewals count).
-- `canceled_by`: `api`, `manager` (dashboard), `admin`, `payer` (management link), `provider` (Stripe: failed retries or canceled in the Stripe dashboard), `system` (signup refunded, `setup_failed`); `null` until canceled. `cancellation_reason`: set when a cancellation is requested/scheduled, e.g. `requested_by_merchant`, `requested_by_customer`, `initial_payment_refunded`, `payment_failed`, `setup_failed:<code>`.
+- `canceled_by`: `api`, `manager` (dashboard), `admin`, `payer` (management link), `provider` (Stripe: failed retries or canceled in the Stripe dashboard), `system` (signup refunded, `setup_failed`); `null` until canceled. `cancel_requested_by`: who scheduled the end-of-period cancellation (`payer`, `api`, `manager`, `admin`, `system`; `null` if none or scheduled from the Stripe dashboard). `cancellation_reason`: set when a cancellation is requested/scheduled: `requested_by_merchant`, `requested_by_customer`, `initial_payment_refunded`, `admin` (Payviox support), `setup_failed:<code>`, or a Stripe reason (`payment_failed`, `cancellation_requested`, `provider`, `provider_deleted`).
 
 ---
 
@@ -669,7 +671,7 @@ Give access until the end of the last period you were paid for: on each `succeed
 
 ### Customer self-service
 
-`management_url` (webhook block + Subscription object, never expires): customer sees price, next payment, card; can cancel at period end and undo. Shown after checkout but NOT emailed by Payviox — include it in the merchant's confirmation email. Anyone with the link can cancel. Customers can't change card, change plan or cancel immediately there.
+`management_url` (webhook block + Subscription object, never expires): customer sees price, next payment, card; can cancel at period end and undo their own cancellation (not one scheduled by the merchant: the page tells them to contact the merchant). Shown after checkout but NOT emailed by Payviox — include it in the merchant's confirmation email. Anyone with the link can cancel. Customers can't change card, change plan or cancel immediately there.
 
 ### Limits
 

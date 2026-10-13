@@ -1,7 +1,7 @@
 ---
 title: 'Cancel Subscription'
 openapi: 'POST /subscriptions/{subscription_id}/cancel'
-description: 'Cancel a subscription with the secret key. at_period_end=true (default) schedules the end at current_period_end — the customer keeps the paid period and it can be undone with resume; at_period_end=false ends it now with no refund. Returns the Subscription. Errors: 409 already canceled, 502 Stripe refused, 503 Stripe unreachable'
+description: 'Cancel a subscription with the secret key. at_period_end=true (default, also when omitted, null or empty) schedules the end at current_period_end — the customer keeps the paid period and you can undo it with resume; at_period_end=false ends it now, voids unpaid Stripe invoices, no refund. Returns the Subscription. Errors: 400 non-boolean, 409 already canceled, 502 Stripe refused, 503 Stripe unreachable'
 ---
 
 ## Overview
@@ -10,9 +10,10 @@ Stops the renewals of an `active` or `past_due` subscription. By default the sub
 
 | | `at_period_end: true` (default) | `at_period_end: false` |
 |---|---|---|
-| Further charges | None after `current_period_end` | None, from now |
+| Further charges | None after `current_period_end` | None, from now — unpaid Stripe invoices of the subscription are voided, so no retry can charge the customer |
 | `status` right after the call | `active`, with `cancel_at_period_end: true` | `canceled` |
 | Can be undone | Yes, with [Resume Subscription](/api/endpoints/resume-subscription) until the period ends | No |
+| `cancel_requested_by` | `api` | unchanged |
 | `subscription_canceled` webhook | When the period ends | Right away |
 | Refund of the current period | — | None (no automatic refund) |
 
@@ -37,12 +38,12 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
 ## Body Parameters
 
 <ParamField body="at_period_end" type="boolean" default="true">
-  `true` to end the subscription at `current_period_end`, `false` to end it now. Send a JSON boolean (`true` / `false`).
+  `true` to end the subscription at `current_period_end`, `false` to end it now. Omitted, `null` or `""` mean `true`; any other non-boolean value returns `400`.
 </ParamField>
 
 ## Response
 
-The updated [Subscription object](/api/endpoints/get-subscription#the-subscription-object). Calling it again with `at_period_end: true` on a subscription already scheduled to end returns `200` without changing anything.
+The updated [Subscription object](/api/endpoints/get-subscription#the-subscription-object). Calling it again with `at_period_end: true` on a subscription already scheduled to end returns `200` without changing anything (and keeps its `cancel_requested_by`). You can still end immediately a subscription the customer scheduled to cancel.
 
 ## Example Requests
 
@@ -132,6 +133,7 @@ print(subscription['cancel_at_period_end'])  # True
   "cancel_at_period_end": true,
   "canceled_at": null,
   "canceled_by": null,
+  "cancel_requested_by": "api",
   "cancellation_reason": "requested_by_merchant",
   "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
@@ -165,7 +167,7 @@ print(subscription['cancel_at_period_end'])  # True
 
 <AccordionGroup>
   <Accordion title="400 -- Invalid at_period_end">
-    `at_period_end` isn't a boolean.
+    `at_period_end` is neither a boolean nor empty (for example `"maybe"`). Omitted, `null` or `""` mean `true`.
   </Accordion>
 
   <Accordion title="401 -- Unauthorized">
@@ -177,7 +179,7 @@ print(subscription['cancel_at_period_end'])  # True
   </Accordion>
 
   <Accordion title="409 -- Already canceled">
-    The subscription has already ended. Nothing to do.
+    The subscription has already ended — nothing to do. A `409` with `The subscription changed meanwhile. Try again.` means it was modified during your request: retry.
   </Accordion>
 
   <Accordion title="502 -- Provider refused">

@@ -258,7 +258,7 @@ Every subscription has a `management_url` (in the webhook `subscription` block a
 
 - see the price, the next payment date and the card used;
 - **cancel at the end of the paid period** — they keep what they paid for;
-- **undo** that cancellation before the period ends.
+- **undo** their own cancellation before the period ends. If you scheduled the cancellation, the page tells them to contact you instead.
 
 The customer sees the link right after paying, but Payviox doesn't email it: **include it in your confirmation email** and in your account page. Customers can't change their card, switch plans or cancel immediately from this page.
 
@@ -269,6 +269,9 @@ The customer sees the link right after paying, but Payviox doesn't email it: **i
 ## Cancel or resume from your backend
 
 Use the [Subscriptions API](/api/endpoints/list-subscriptions) with your secret key, or the **Subscriptions** page of your dashboard (team members need the *Cancel and resume subscriptions* permission).
+
+- **Cancel now** (`at_period_end: false`) also voids the subscription's unpaid Stripe invoices, so no pending retry can charge the customer afterwards. There's no automatic refund.
+- **Resume** only works on a cancellation scheduled on your side (`cancel_requested_by` `api`, `manager`, or `null` for one scheduled from your Stripe dashboard). A cancellation scheduled by the customer (`payer`) can only be undone by the customer, from their management link; one scheduled by Payviox (`admin`, `system`) requires support. Both return `403`. The customer's cancellation withdraws their consent to be charged: renewing anyway would be an unauthorized charge, the typical cause of "canceled recurring payment" disputes.
 
 ```bash
 # Cancel at the end of the paid period (default) — can be undone
@@ -302,7 +305,7 @@ curl -X POST https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd
 </CardGroup>
 
 <Tip>
-  Manage subscriptions through Payviox, not directly in your Stripe dashboard. A subscription canceled on Stripe is synced (`canceled_by: "provider"`), but changing its price there isn't supported.
+  Manage subscriptions through Payviox, not directly in your Stripe dashboard. A subscription canceled on Stripe is synced (`canceled_by: "provider"`), but changing its price there isn't supported, and if you resume a customer's cancellation in Stripe, Payviox re-applies the cancellation.
 </Tip>
 
 ## Limits
@@ -340,8 +343,12 @@ curl -X POST https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd
     Your Stripe endpoint `https://api.payviox.com/payment/stripe/webhook` is missing, or lacks the events listed in `missing_events`. [Add them](#enable-the-stripe-renewal-events) in the right mode (test or live). The check is cached for up to an hour, so the error can persist briefly after you fix it.
   </Accordion>
 
-  <Accordion title="400 No payment method that supports subscriptions">
-    Card, Apple Pay and Google Pay (Stripe) are all inactive on your account, or Stripe isn't connected. Activate at least one of them in the dashboard. If you pass `paymentMethodId`, it must be one of these methods.
+  <Accordion title="400 No payment method that supports subscriptions / Stripe is not fully configured">
+    Card, Apple Pay and Google Pay (Stripe) are all inactive on your account, or your Stripe publishable or secret key is missing in **Providers → Stripe**. Activate at least one of these methods and complete the Stripe keys. If you pass `paymentMethodId`, it must be one of these methods.
+  </Accordion>
+
+  <Accordion title="403 when resuming a subscription">
+    The cancellation was scheduled by the customer (`cancel_requested_by: "payer"`) — only they can undo it, from their management link — or by Payviox (`admin`, `system`) — contact support.
   </Accordion>
 
   <Accordion title="The subscription was canceled right after signup (setup_failed)">

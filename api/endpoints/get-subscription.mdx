@@ -107,7 +107,7 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
 </ResponseField>
 
 <ResponseField name="cancel_at_period_end" type="boolean" required>
-  `true` when the subscription is scheduled to end at `current_period_end` (by you or by the customer). It can be undone with [Resume Subscription](/api/endpoints/resume-subscription).
+  `true` when the subscription is scheduled to end at `current_period_end` (by you or by the customer). See `cancel_requested_by` for who can undo it.
 </ResponseField>
 
 <ResponseField name="canceled_at" type="string">
@@ -119,8 +119,22 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
   `api` (your backend), `manager` (your dashboard), `admin` (Payviox support), `payer` (the customer, from the management link), `provider` (on Stripe — after all renewal retries failed, or canceled from your Stripe dashboard), `system` (Payviox — the signup payment was refunded, or the subscription couldn't be created on Stripe: `setup_failed`).
 </ResponseField>
 
+<ResponseField name="cancel_requested_by" type="string">
+  Who scheduled the end-of-period cancellation: `payer` (the customer, from the management link), `api` (your backend), `manager` (your dashboard), `admin` (Payviox support) or `system`. `null` when no cancellation is scheduled — or when it was scheduled from your Stripe dashboard.
+
+  Only the same side can undo it: you can [resume](/api/endpoints/resume-subscription) `api`, `manager` and `null`; a `payer` cancellation can only be undone by the customer, and an `admin`/`system` one only by Payviox.
+</ResponseField>
+
 <ResponseField name="cancellation_reason" type="string">
-  Set as soon as a cancellation is requested or scheduled. Common values: `requested_by_merchant`, `requested_by_customer`, `initial_payment_refunded`, `payment_failed` (Stripe stopped retrying), `setup_failed:<code>` (Payviox couldn't create the subscription on Stripe after the first payment). Treat unknown values as informational.
+  Set as soon as a cancellation is requested or scheduled:
+  - `requested_by_merchant` — you, from the API or the dashboard
+  - `requested_by_customer` — the customer, from the management link
+  - `initial_payment_refunded` — the signup payment was refunded
+  - `admin` — canceled by Payviox support
+  - `setup_failed:<code>` — Payviox couldn't create the subscription on Stripe after the first payment
+  - a Stripe reason, when it ended on Stripe's side: `payment_failed` (Stripe stopped retrying), `cancellation_requested` (canceled from your Stripe dashboard), `provider`, `provider_deleted`
+
+  Treat unknown values as informational.
 </ResponseField>
 
 <ResponseField name="initial_session_id" type="string" required>
@@ -214,6 +228,7 @@ echo $subscription['status']; // "active"
   "cancel_at_period_end": false,
   "canceled_at": null,
   "canceled_by": null,
+  "cancel_requested_by": null,
   "cancellation_reason": null,
   "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
@@ -246,6 +261,7 @@ echo $subscription['status']; // "active"
   "cancel_at_period_end": true,
   "canceled_at": "2027-01-13T10:30:04+00:00",
   "canceled_by": "payer",
+  "cancel_requested_by": "payer",
   "cancellation_reason": "requested_by_customer",
   "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",

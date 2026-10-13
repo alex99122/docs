@@ -424,13 +424,31 @@ components:
             e.g. after failed retries or a cancellation in the Stripe dashboard), `system`
             (Payviox, e.g. signup payment refunded or `setup_failed`). `null` until the
             subscription is canceled.
+        cancel_requested_by:
+          type: string
+          nullable: true
+          enum:
+            - payer
+            - api
+            - manager
+            - admin
+            - system
+            - null
+          description: >-
+            Who scheduled the end-of-period cancellation: `payer` (the customer), `api`,
+            `manager` (your dashboard), `admin` (Payviox support) or `system`. `null` when no
+            cancellation is scheduled, or when it was scheduled from your Stripe dashboard. Only
+            the same side can resume it: you (`api`, `manager`, `null`), the customer (`payer`)
+            or Payviox (`admin`, `system`).
         cancellation_reason:
           type: string
           nullable: true
           description: >-
-            Set as soon as a cancellation is requested or scheduled. Common values:
-            `requested_by_merchant`, `requested_by_customer`, `initial_payment_refunded`,
-            `payment_failed`, `setup_failed:<code>`. Treat unknown values as informational.
+            Set as soon as a cancellation is requested or scheduled: `requested_by_merchant`,
+            `requested_by_customer`, `initial_payment_refunded`, `admin` (canceled by Payviox
+            support), `setup_failed:<code>`, or a Stripe reason such as `payment_failed`,
+            `cancellation_requested`, `provider` or `provider_deleted`. Treat unknown values as
+            informational.
         initial_session_id:
           type: string
           description: Session ID of the signup payment
@@ -469,6 +487,7 @@ components:
         cancel_at_period_end: false
         canceled_at: null
         canceled_by: null
+        cancel_requested_by: null
         cancellation_reason: null
         initial_session_id: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
         management_url: https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD
@@ -494,9 +513,10 @@ components:
           type: boolean
           default: true
           description: >-
-            `true` (default): the subscription ends at `current_period_end`, the customer keeps
-            the period already paid, and you can undo it with resume. `false`: ends now, no
-            further charges, no automatic refund.
+            `true` (default, also when omitted, `null` or empty): the subscription ends at
+            `current_period_end`, the customer keeps the period already paid, and you can undo it
+            with resume. `false`: ends now and voids its unpaid Stripe invoices, so no retry can
+            charge the customer; no automatic refund.
 paths:
   /session:
     post:
@@ -521,8 +541,9 @@ paths:
         '400':
           description: >-
             Bad request — field validation errors (`{ "field": ["message"] }`), invalid
-            `subscription` terms, no subscription-capable payment method, or
-            `subscription_setup_incomplete` (Stripe webhook endpoint missing renewal events)
+            `subscription` terms, no subscription-capable payment method, Stripe keys not
+            configured, or `subscription_setup_incomplete` (Stripe webhook endpoint missing
+            renewal events)
           content:
             application/json:
               schema:
@@ -759,7 +780,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
         '400':
-          description: '`at_period_end` is not a boolean'
+          description: '`at_period_end` is not a boolean (omitted, `null` or `""` mean `true`)'
         '401':
           description: Unauthorized (missing or invalid Secret API Key)
         '404':
@@ -769,7 +790,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: The subscription is already canceled
+          description: The subscription is already canceled, or changed during the request (retry)
           content:
             application/json:
               schema:
@@ -795,7 +816,9 @@ paths:
       summary: Resume Subscription
       description: >-
         Undo a scheduled cancellation (`cancel_at_period_end: true`) so the subscription keeps
-        renewing. Requires your Secret API Key.
+        renewing. Only a cancellation scheduled on your side (`cancel_requested_by` `api`,
+        `manager` or `null`) can be resumed; one scheduled by the customer or by Payviox returns
+        403. Requires your Secret API Key.
       tags:
         - Subscriptions
       parameters:
@@ -820,8 +843,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: >-
+            The cancellation was scheduled by the customer (`payer`) or by Payviox (`admin`,
+            `system`): only they can resume it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_update_failed
+                message: Your customer canceled this subscription. Only they can resume it, from their management link.
         '409':
-          description: A canceled subscription can't be resumed
+          description: A canceled subscription can't be resumed, or it changed during the request (retry)
           content:
             application/json:
               schema:

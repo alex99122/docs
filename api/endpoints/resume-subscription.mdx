@@ -1,12 +1,18 @@
 ---
 title: 'Resume Subscription'
 openapi: 'POST /subscriptions/{subscription_id}/resume'
-description: 'Undo a scheduled cancellation (cancel_at_period_end=true) with the secret key, so the subscription keeps renewing. Returns the Subscription. Errors: 409 when the subscription is already canceled (cannot be resumed), 502 Stripe refused, 503 Stripe unreachable'
+description: 'Undo a scheduled cancellation (cancel_at_period_end=true) with the secret key, so the subscription keeps renewing. Only cancellations scheduled on the merchant side (cancel_requested_by api, manager or null) can be resumed; 403 when the customer (payer) or Payviox (admin, system) scheduled it. Returns the Subscription. Errors: 403, 409 already canceled, 502 Stripe refused, 503 Stripe unreachable'
 ---
 
 ## Overview
 
-Undoes a cancellation scheduled at the end of the period — by you, from the dashboard, or by the customer from their management link. The subscription keeps renewing as before.
+Undoes a cancellation scheduled at the end of the period by **your side** — your backend (`cancel_requested_by: "api"`), your dashboard (`"manager"`) or your Stripe dashboard (`null`). The subscription keeps renewing as before.
+
+<Warning>
+  **You can't undo the customer's cancellation.** If the customer scheduled it from their management link (`cancel_requested_by: "payer"`), only they can resume it, from that same link; if Payviox did (`"admin"` or `"system"`), contact support. Both return `403`.
+
+  The customer's cancellation is their withdrawal of consent to be charged: renewing anyway would be a charge they didn't authorize, the typical cause of "canceled recurring payment" disputes. For the same reason, if you resume a customer's cancellation directly in your Stripe dashboard, Payviox re-applies the cancellation.
+</Warning>
 
 <Note>
   Only a **scheduled** cancellation can be undone. Once a subscription is `canceled` (it reached `current_period_end`, or it was canceled immediately), it can't be resumed: have the customer subscribe again with a new session.
@@ -96,10 +102,25 @@ print(response.json()['cancel_at_period_end'])  # False
   "cancel_at_period_end": false,
   "canceled_at": null,
   "canceled_by": null,
+  "cancel_requested_by": null,
   "cancellation_reason": null,
   "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
   "created_at": "2026-10-13T10:30:00+00:00"
+}
+```
+
+```json Canceled By The Customer (403)
+{
+  "error": "subscription_update_failed",
+  "message": "Your customer canceled this subscription. Only they can resume it, from their management link."
+}
+```
+
+```json Canceled By Payviox (403)
+{
+  "error": "subscription_update_failed",
+  "message": "This subscription was canceled by Payviox. Contact support."
 }
 ```
 
@@ -126,12 +147,16 @@ print(response.json()['cancel_at_period_end'])  # False
     The API key is missing or invalid. This endpoint only accepts your **Secret API Key**.
   </Accordion>
 
+  <Accordion title="403 -- Cancellation scheduled by the customer or Payviox">
+    `cancel_requested_by` is `payer` (only the customer can resume, from their management link) or `admin`/`system` (contact support).
+  </Accordion>
+
   <Accordion title="404 -- Subscription not found">
     No subscription with this ID belongs to your business (`subscription_not_found`).
   </Accordion>
 
   <Accordion title="409 -- Already canceled">
-    The subscription has already ended and can't be resumed.
+    The subscription has already ended and can't be resumed. A `409` with `The subscription changed meanwhile. Try again.` means it was modified during your request: retry.
   </Accordion>
 
   <Accordion title="502 -- Provider refused">
