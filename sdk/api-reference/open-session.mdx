@@ -1,6 +1,6 @@
 ---
 title: "openSession()"
-description: "Redirect the customer to the payment page for a given session ID. Key method of the recommended integration: your backend creates the session, the SDK opens it"
+description: "Redirect the customer to the payment page for a given session ID. Key method of the recommended integration: your backend creates the session, the SDK opens it — including subscription sessions, which can only be created server-side"
 icon: "arrow-up-right-from-square"
 ---
 
@@ -61,3 +61,7 @@ payviox.openSession(sessionId);
 <Tip>
 Use this method whenever you need to do something between session creation and redirection — or when the session wasn't created in the browser at all.
 </Tip>
+
+<Note>
+**Subscriptions** are opened the same way: your backend creates the session with a `subscription` object and your secret key, and `openSession()` takes the customer to the payment page. See the [Subscriptions guide](/guides/subscriptions).
+</Note>

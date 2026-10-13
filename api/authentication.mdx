@@ -43,6 +43,7 @@ Payviox provides two types of API keys for different integration scenarios:
 | Backend creates session for user | Secret Key | Provide via `ip` param |
 | Mobile app via backend | Secret Key | Provide via `ip` param |
 | Server-to-server integration | Secret Key | Optional `ip` param |
+| [Subscription](/guides/subscriptions) session, subscriptions API | Secret Key only | Optional `ip` param |
 
 <Note>
   When using the **Secret API Key**, you can optionally provide the end-user's IP address using the `ip` parameter in the Create Session request. If provided, this IP will be validated when the user completes payment to prevent fraud.
@@ -91,7 +92,7 @@ Authorization: Bearer sk_live_xxxxxxxxxxxx
 </CodeGroup>
 
 <Tip>
-  Public keys typically start with `pk_` and Secret keys with `sk_`. Both work with the same endpoints, but Secret keys unlock additional parameters like `ip`.
+  Public keys typically start with `pk_` and Secret keys with `sk_`. Both work with Create Session and Get Payment Methods, but Secret keys unlock additional parameters like `ip` and `subscription`. Balance, payment details and subscription endpoints accept the Secret key only.
 </Tip>
 
 ## Example Request

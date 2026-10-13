@@ -1,7 +1,7 @@
 ---
 title: 'Create Session'
 openapi: 'POST /session'
-description: 'Create a payment session with amount, currency, and items. Supports public (pk_) and secret (sk_) API keys, optional IP validation for fraud prevention, direct provider redirect via paymentMethodId, and rate limiting'
+description: 'Create a payment session with amount, currency, and items. Supports public (pk_) and secret (sk_) API keys, optional IP validation for fraud prevention, direct provider redirect via paymentMethodId, rate limiting, and recurring billing via the optional subscription object (interval, interval_count — secret key only, amount = price per period)'
 ---
 
 ## Overview
@@ -32,6 +32,7 @@ Authorization: Bearer YOUR_API_KEY
     
     - Client IP is **automatically captured** from the request
     - No need to provide the `ip` parameter
+    - Not available for [subscriptions](#subscriptions), which require the Secret API Key
     - Ideal for: websites, single-page applications
     
     ```javascript
@@ -537,6 +538,83 @@ If the payment initiation fails (e.g., provider API error), the response will in
   When `payment_error` is present, the session is still created. You can redirect the customer to `https://secure.payviox.com/{session_id}` to let them try another payment method.
 </Warning>
 
+## Subscriptions
+
+Add a `subscription` object to turn the session into a **subscription signup**: the customer pays the first period on the payment page, then the subscription renews automatically every period. `amount` and `items` describe your price for **one period**; the customer is charged it plus the fees your account adds for the customer, as for a one-time payment (the renewal price is the subscription's `unit_amount`). See the [Subscriptions guide](/guides/subscriptions) for the end-to-end flow (Stripe setup, webhooks, cancellation).
+
+<Warning>
+  Subscription sessions require your **Secret API Key**. With a public key the request fails with `403 subscription_requires_secret_key`, so the SDK's `createSession()` can't create one: create the session on your server, then open it in the browser with [`openSession()`](/sdk/api-reference/open-session).
+</Warning>
+
+<ParamField body="subscription" type="object">
+  Optional. Makes this session a subscription signup. Omit it (or send `null`) for a one-time payment.
+
+  <Expandable title="subscription properties">
+    <ParamField body="interval" type="string" required>
+      Unit of the billing period: `day`, `week`, `month` or `year`.
+    </ParamField>
+    <ParamField body="interval_count" type="integer" default="1">
+      Number of intervals between two charges — `{ "interval": "month", "interval_count": 3 }` bills every 3 months. A period can't exceed 3 years: max `1095` days, `156` weeks, `36` months or `3` years.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Requirements**
+
+- **Secret API Key** (`sk_`).
+- **Stripe connected** in your Payviox dashboard, with card (`stripe_credit`), Apple Pay (`stripe_apple_pay`) or Google Pay (`stripe_google_pay`) active. Only these methods are offered on the payment page of a subscription session; if you pass `paymentMethodId`, it must be one of them.
+- **Renewal events enabled** on your Stripe webhook endpoint `https://api.payviox.com/payment/stripe/webhook`: `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`, `customer.subscription.updated`, `customer.subscription.deleted`. See [Stripe setup](/guides/subscriptions#enable-the-stripe-renewal-events).
+- Amounts in **USD** cents, minimum `100` ($1.00) per period.
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/session \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{
+    "amount": 999,
+    "currency": "USD",
+    "customer": "customer_abc123",
+    "email": "john@example.com",
+    "order_id": "sub_order_12345",
+    "description": "Pro plan - monthly",
+    "ip": "203.0.113.42",
+    "subscription": { "interval": "month", "interval_count": 1 },
+    "items": [
+      { "name": "Pro plan", "quantity": 1, "price": 999 }
+    ]
+  }'
+```
+
+```javascript Node.js
+const response = await fetch('https://api.payviox.com/session', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}`, // sk_
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    amount: 999, // price of ONE period, in cents
+    currency: 'USD',
+    customer: user.id,
+    email: user.email,
+    order_id: `sub_${user.id}_${Date.now()}`,
+    description: 'Pro plan - monthly',
+    ip: req.ip,
+    subscription: { interval: 'month', interval_count: 1 },
+    items: [{ name: 'Pro plan', quantity: 1, price: 999 }],
+  }),
+});
+
+const { session_id } = await response.json(); // hand it to payviox.openSession()
+```
+
+</CodeGroup>
+
+The response is the usual `{ "session_id": "..." }` (201). The subscription itself (`psub_...`) only exists once the first payment succeeds: you receive it in the `subscription` block of the `succeeded` [webhook](/webhooks/integration#subscription-events).
+
 ## Example Response
 
 <ResponseExample>
@@ -576,9 +654,27 @@ If the payment initiation fails (e.g., provider API error), the response will in
 }
 ```
 
+```json Subscription Setup Incomplete (400)
+{
+  "error": "subscription_setup_incomplete",
+  "message": "Your Stripe webhook endpoint is missing events required to track renewals: invoice.paid, customer.subscription.deleted. Enable them in your Stripe dashboard, then retry.",
+  "missing_events": [
+    "invoice.paid",
+    "customer.subscription.deleted"
+  ]
+}
+```
+
 ```json Unauthorized (401)
 {
   "error": "Unauthorized"
+}
+```
+
+```json Subscription With Public Key (403)
+{
+  "error": "subscription_requires_secret_key",
+  "message": "Subscriptions must be created from your server with your secret key (sk_). Create the session server-side, then open it with the SDK."
 }
 ```
 
@@ -624,6 +720,52 @@ If the payment initiation fails (e.g., provider API error), the response will in
     ```
   </Accordion>
 
+  <Accordion title="400 — Subscription errors">
+    Returned when the `subscription` object can't be accepted. The message says what to fix.
+
+    **Invalid terms** — unknown `interval`, or `interval_count` not an integer or above the 3-year limit:
+
+    ```json
+    {
+      "subscription": ["subscription.interval_count must be between 1 and 36 for interval month."]
+    }
+    ```
+
+    **No subscription-capable method** — card, Apple Pay and Google Pay (Stripe) are all inactive on your account:
+
+    ```json
+    {
+      "subscription": ["No payment method that supports subscriptions is enabled on your account. Enable card, Apple Pay or Google Pay payments with Stripe."]
+    }
+    ```
+
+    **Stripe not configured** — a subscription-capable method is active but your Stripe publishable or secret key is missing:
+
+    ```json
+    {
+      "subscription": ["No payment method that supports subscriptions is configured on your account. Enable card, Apple Pay or Google Pay with Stripe (public and secret keys)."]
+    }
+    ```
+
+    **Incompatible `paymentMethodId`** — the forced method can't carry a subscription:
+
+    ```json
+    {
+      "paymentMethodId": ["This payment method cannot be used for a subscription. Supported methods on your account: stripe_credit, stripe_apple_pay."]
+    }
+    ```
+
+    **`subscription_setup_incomplete`** — your Stripe webhook endpoint `https://api.payviox.com/payment/stripe/webhook` is missing (all events are then listed) or lacks events needed to track renewals. Add the events listed in `missing_events` in your Stripe dashboard ([how](/guides/subscriptions#enable-the-stripe-renewal-events)). Payviox caches this check for up to an hour, so the error can persist briefly after you fix the endpoint.
+
+    ```json
+    {
+      "error": "subscription_setup_incomplete",
+      "message": "Your Stripe webhook endpoint is missing events required to track renewals: invoice.paid. Enable them in your Stripe dashboard, then retry.",
+      "missing_events": ["invoice.paid"]
+    }
+    ```
+  </Accordion>
+
   <Accordion title="401 — Unauthorized">
     Returned when the API key is missing or invalid.
 
@@ -632,6 +774,19 @@ If the payment initiation fails (e.g., provider API error), the response will in
     ```json
     {
       "error": "Unauthorized"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="403 — Subscription requires the secret key">
+    Returned when the request contains a `subscription` object but is authenticated with a Public API Key. The recurring price must never be set from a browser.
+
+    **How to resolve:** create the session from your backend with your Secret API Key, then open it with the SDK's [`openSession()`](/sdk/api-reference/open-session).
+
+    ```json
+    {
+      "error": "subscription_requires_secret_key",
+      "message": "Subscriptions must be created from your server with your secret key (sk_). Create the session server-side, then open it with the SDK."
     }
     ```
   </Accordion>
@@ -720,6 +875,14 @@ After creating a session:
     - Must be unique per business
     - Used for tracking and webhooks
     - Recommended to use your internal order/transaction ID
+    - For a subscription, renewals reuse it with a cycle suffix: `{order_id}-2`, `{order_id}-3`, …
+  </Accordion>
+
+  <Accordion title="Subscription Validation">
+    - Secret API Key only
+    - `interval`: `day`, `week`, `month` or `year`
+    - `interval_count`: integer from 1 up to 3 years (1095 days, 156 weeks, 36 months, 3 years); defaults to 1
+    - `amount` is the price of one period (minimum 100 cents)
   </Accordion>
 </AccordionGroup>
 

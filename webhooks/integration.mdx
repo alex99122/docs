@@ -1,6 +1,6 @@
 ---
 title: 'Webhook Integration'
-description: 'Receive HTTP POST webhook notifications for payment events (succeeded, pending_review, declined, refunded, expired, incomplete). Includes HMAC-SHA256 signature verification, full payload structure, retry policy (4 attempts), and idempotency handling'
+description: 'Receive HTTP POST webhook notifications for payment events (succeeded, pending_review, declined, refunded, expired, incomplete) and subscription events (subscription_payment_failed, subscription_canceled; subscription block with cycle and current_period_end on subscription payments, renewals as succeeded with order_id {order_id}-{cycle}). Includes HMAC-SHA256 signature verification, full payload structure, retry policy (4 attempts), and idempotency handling'
 ---
 
 ## Overview
@@ -8,7 +8,7 @@ description: 'Receive HTTP POST webhook notifications for payment events (succee
 Webhooks allow Payviox to send real-time notifications to your server when payment events occur. When a payment is processed, Payviox sends an HTTP POST request to your configured webhook URL with the payment details.
 
 <Info>
-  Webhooks are essential for keeping your application synchronized with payment statuses. Configure your webhook URL in the [Payviox Dashboard](https://dash.payviox.com) under **Settings** > **Webhooks**.
+  Webhooks are essential for keeping your application synchronized with payment statuses. Configure your webhook URL in the [Payviox Dashboard](https://dash.payviox.com) under **Developers** > **Webhooks**.
 </Info>
 
 ## Webhook Configuration
@@ -20,7 +20,7 @@ Webhooks allow Payviox to send real-time notifications to your server when payme
     Create an endpoint on your server to receive POST requests (e.g., `https://yourdomain.com/api/webhook`)
   </Step>
   <Step title="Add URL to Dashboard">
-    Go to your [Payviox Dashboard](https://dash.payviox.com) and navigate to **Settings** > **Webhooks**
+    Go to your [Payviox Dashboard](https://dash.payviox.com) and navigate to **Developers** > **Webhooks**
   </Step>
   <Step title="Enter Your Webhook URL">
     Paste your endpoint URL in the webhook URL field
@@ -45,6 +45,8 @@ You can subscribe to the following webhook events:
 | `refunded` | Refund processed | ✅ If you process refunds |
 | `expired` | Payment session expired without completion | ⚪ Optional |
 | `incomplete` | Crypto payment underpaid — customer sent less than requested | ⚪ Optional (crypto only) |
+| `subscription_payment_failed` | A subscription renewal charge failed (includes `failure_reason`) | ✅ If you sell [subscriptions](/guides/subscriptions) |
+| `subscription_canceled` | A subscription ended — no further charges | ✅ If you sell [subscriptions](/guides/subscriptions) |
 
 <Warning>
   Always verify webhook signatures to ensure requests are coming from Payviox and not from malicious actors.
@@ -119,6 +121,8 @@ Payviox sends webhooks with the following structure:
   - `refunded`: A refund has been processed for this transaction.
   - `expired`: Payment session expired without completion.
   - `incomplete`: A crypto payment came in short (less than the requested amount). Opt-in event. Includes `amount_remaining` (how much is still due). Do NOT fulfill until you receive `succeeded`.
+  - `subscription_payment_failed`: A subscription renewal charge failed. Opt-in event. Includes `failure_reason`. See [Subscription events](#subscription-events).
+  - `subscription_canceled`: A subscription ended. Opt-in event. See [Subscription events](#subscription-events).
 </ParamField>
 
 <ParamField path="provider" type="string" required>
@@ -182,6 +186,41 @@ Payviox sends webhooks with the following structure:
 
 <ParamField path="amount_remaining" type="integer">
   Only present on `incomplete` events. The amount still due, in the smallest currency unit (e.g., cents for USD) — how much more the customer must send to complete the payment. The amount already received equals `amount - amount_remaining`.
+</ParamField>
+
+<ParamField path="subscription" type="object">
+  Only present on events of a [subscription](/guides/subscriptions), once the subscription exists — from the first `succeeded` onward (a `pending_review`, `declined` or `expired` event on a signup session doesn't have it). Values are read when the webhook is sent.
+
+  <Expandable title="subscription properties">
+    <ParamField path="id" type="string">
+      Payviox subscription ID (`psub_...`). Use it with the [Subscriptions API](/api/endpoints/get-subscription).
+    </ParamField>
+    <ParamField path="status" type="string">
+      `active`, `past_due` (a renewal charge failed, Stripe is retrying) or `canceled`.
+    </ParamField>
+    <ParamField path="interval" type="string">
+      `day`, `week`, `month` or `year`.
+    </ParamField>
+    <ParamField path="interval_count" type="integer">
+      Number of intervals between two charges.
+    </ParamField>
+    <ParamField path="cycle" type="integer">
+      Billing cycle of the payment this event is about: `1` = signup, `2` and up = renewals.
+    </ParamField>
+    <ParamField path="current_period_end" type="string">
+      ISO 8601 end of the current billing period (next renewal date).
+    </ParamField>
+    <ParamField path="cancel_at_period_end" type="boolean">
+      `true` if the subscription is scheduled to end at `current_period_end`.
+    </ParamField>
+    <ParamField path="management_url" type="string">
+      Customer self-service page (view, cancel at period end, undo).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="failure_reason" type="string">
+  Only present on `subscription_payment_failed` events. Why the renewal charge failed: a card decline code such as `insufficient_funds`, `expired_card` or `card_declined`, `authentication_required` when the bank asks the customer to authenticate (3D Secure), or `payment_failed` when no detail is available. See [failed renewals](/guides/subscriptions#handle-the-webhooks) for what to do.
 </ParamField>
 
 ## Event Types
@@ -269,6 +308,202 @@ Payviox sends different webhook events based on the payment lifecycle. Here's wh
 
   **Do NOT fulfill** the order until you receive `succeeded`.
 </Card>
+
+### `subscription_payment_failed` - Renewal Charge Failed
+
+<Card title="⚠️ Subscription Payment Failed" icon="credit-card" color="#f59e0b">
+  A renewal charge of a subscription failed. **Opt-in** event. The payload has `failure_reason` and the `subscription` block (`status` is usually `past_due`). Its `current_period_end` is the end of the period that was **not** paid: don't extend access from it.
+
+  **Typical flow:**
+  1. Stripe charges the saved card at the end of the period
+  2. The charge fails (declined, expired card, authentication required…)
+  3. You receive `subscription_payment_failed` (once per cycle, even if Stripe retries several times)
+  4. Stripe retries automatically. If a retry succeeds, you receive `succeeded` with the same `order_id`; if Stripe gives up and cancels, you receive `subscription_canceled`
+</Card>
+
+### `subscription_canceled` - Subscription Ended
+
+<Card title="🛑 Subscription Canceled" icon="ban" color="#6b7280">
+  The subscription ended: no further charges. **Opt-in** event, sent once per subscription. It's attached to the signup payment, so `order_id` is your original `order_id` and `subscription.cycle` is `1`.
+
+  **What to do:** keep access until the end of the last period you were paid for (the `subscription.current_period_end` of the last `succeeded` you received), then revoke it.
+</Card>
+
+## Subscription Events
+
+[Subscriptions](/guides/subscriptions) use the same webhook endpoint, signature and retry policy as one-time payments. Each billing cycle is its own payment session:
+
+| What happens | Event | `order_id` | `subscription.cycle` |
+|---|---|---|---|
+| Signup payment succeeds | `succeeded` | `order_12345` (yours) | `1` |
+| Renewal charged | `succeeded` — new session each cycle | `order_12345-2`, `order_12345-3`, … | `2`, `3`, … |
+| Renewal charge failed | `subscription_payment_failed` (opt-in) | `order_12345-N` | `N` |
+| Subscription ended | `subscription_canceled` (opt-in) | `order_12345` (signup) | `1` |
+
+<Note>
+  `subscription_payment_failed` and `subscription_canceled` are **opt-in**: select them in **Developers** > **Webhooks** in the [dashboard](https://dash.payviox.com). Scheduling a cancellation (by you or by the customer) sends no event — `subscription_canceled` arrives when the subscription actually ends. To find subscriptions scheduled to end, use [List Subscriptions](/api/endpoints/list-subscriptions) with `status=canceling`.
+</Note>
+
+- **Signup**: the first payment goes through the usual flow, fraud review included — it can be `pending_review` before `succeeded`. The subscription is created when it succeeds.
+- **Renewals** are charged by Stripe and arrive directly as `succeeded` (no fraud review). `metadata` contains your signup metadata plus the renewal's own `integration_session_id`. `amount` is your price per period and `fees` the fees added for the customer.
+- **Idempotency**: keep deduplicating on `order_id` + `type`. Each cycle has its own `order_id`, so a renewal never collides with the signup or with another renewal.
+- **Finding your customer**: the webhook `customer` field holds the payer's billing details, not your customer ID. Put your own IDs in `metadata` when you create the signup session: they're sent with every event of the subscription.
+
+### Example payloads
+
+<CodeGroup>
+
+```json Signup succeeded
+{
+  "amount": 999,
+  "currency": "USD",
+  "fees": 45,
+  "metadata": {
+    "integration_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "user_id": "usr_123"
+  },
+  "type": "succeeded",
+  "provider": "stripe",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "payment_method": "credit",
+  "customer": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "subscription": {
+    "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+    "status": "active",
+    "interval": "month",
+    "interval_count": 1,
+    "cycle": 1,
+    "current_period_end": "2026-11-13T10:30:00+00:00",
+    "cancel_at_period_end": false,
+    "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD"
+  }
+}
+```
+
+```json Renewal succeeded
+{
+  "amount": 999,
+  "currency": "USD",
+  "fees": 30,
+  "metadata": {
+    "integration_session_id": "Wm4kP9sT2vXc7LqA1nBz8RdY3fHj6GeU",
+    "user_id": "usr_123"
+  },
+  "type": "succeeded",
+  "provider": "stripe",
+  "order_id": "order_12345-2",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "payment_method": "credit",
+  "customer": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "subscription": {
+    "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+    "status": "active",
+    "interval": "month",
+    "interval_count": 1,
+    "cycle": 2,
+    "current_period_end": "2026-12-13T10:30:00+00:00",
+    "cancel_at_period_end": false,
+    "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD"
+  }
+}
+```
+
+```json subscription_payment_failed
+{
+  "amount": 999,
+  "currency": "USD",
+  "fees": 30,
+  "metadata": {
+    "integration_session_id": "Tq8nV3bK6wYp1ZsE9mRc4LxD7hGf2JaU",
+    "user_id": "usr_123"
+  },
+  "type": "subscription_payment_failed",
+  "provider": "stripe",
+  "order_id": "order_12345-3",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "payment_method": "credit",
+  "failure_reason": "insufficient_funds",
+  "subscription": {
+    "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+    "status": "past_due",
+    "interval": "month",
+    "interval_count": 1,
+    "cycle": 3,
+    "current_period_end": "2027-01-13T10:30:00+00:00",
+    "cancel_at_period_end": false,
+    "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD"
+  }
+}
+```
+
+```json subscription_canceled
+{
+  "amount": 999,
+  "currency": "USD",
+  "fees": 45,
+  "metadata": {
+    "integration_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "user_id": "usr_123"
+  },
+  "type": "subscription_canceled",
+  "provider": "stripe",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "payment_method": "credit",
+  "subscription": {
+    "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+    "status": "canceled",
+    "interval": "month",
+    "interval_count": 1,
+    "cycle": 1,
+    "current_period_end": "2026-12-13T10:30:00+00:00",
+    "cancel_at_period_end": true,
+    "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD"
+  }
+}
+```
+
+</CodeGroup>
+
+### Handling subscription events
+
+```javascript Node.js
+switch (data.type) {
+  case 'succeeded':
+    if (data.subscription) {
+      // Signup (cycle 1) or renewal (cycle 2+): the period is paid
+      await extendAccess(data.subscription.id, data.subscription.current_period_end);
+    } else {
+      await fulfillOrder(data.order_id, data);
+    }
+    break;
+
+  case 'subscription_payment_failed':
+    // Stripe retries on its own; tell the customer, apply your grace policy
+    await notifyPaymentIssue(data.subscription.id, data.failure_reason);
+    break;
+
+  case 'subscription_canceled':
+    // No more charges: revoke access at the end of the last paid period
+    await endAccessAfterPaidPeriod(data.subscription.id);
+    break;
+}
+```
 
 ## Webhook Headers
 
@@ -759,7 +994,7 @@ A webhook is considered successfully delivered when your endpoint:
     - Not implementing idempotency checks
     - Slow response times causing retries
     
-    **Solution:** Implement idempotency using session_id and order_id, and respond quickly with 200 OK.
+    **Solution:** Implement idempotency on `order_id` + `type` (each subscription cycle has its own `order_id`), and respond quickly with 200 OK.
   </Accordion>
   
   <Accordion title="Webhook Timeout">

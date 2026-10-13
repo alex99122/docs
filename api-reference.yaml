@@ -80,6 +80,15 @@ components:
           example:
             user_id: "usr_123"
             campaign: "summer_sale"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Optional customer email address. Stored on the session, and on the subscription as `customer_email`
+        subscription:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/SubscriptionTerms'
     CreateSessionResponse:
       type: object
       properties:
@@ -232,6 +241,282 @@ components:
           type: string
           nullable: true
           description: End-user's browser User-Agent string
+    SubscriptionTerms:
+      type: object
+      description: >-
+        Turns the session into a subscription signup: the customer pays the first period on the
+        payment page, then the subscription renews automatically every period. `amount` is your
+        price per period (the customer also pays the fees your account adds for the customer; see
+        `unit_amount` on the Subscription). Requires your Secret API Key (sk_). Only card, Apple
+        Pay and Google Pay (Stripe) are offered for a subscription. Send `null` or omit it for a
+        one-time payment.
+      required:
+        - interval
+      properties:
+        interval:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+            - year
+          description: Unit of the billing period
+        interval_count:
+          type: integer
+          minimum: 1
+          default: 1
+          description: >-
+            Number of intervals between two charges (e.g. `3` with `month` = every 3 months).
+            A period can't exceed 3 years: max 1095 for `day`, 156 for `week`, 36 for `month`,
+            3 for `year`.
+      example:
+        interval: month
+        interval_count: 1
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable explanation of what to fix
+    SubscriptionSetupIncompleteError:
+      type: object
+      properties:
+        error:
+          type: string
+          enum:
+            - subscription_setup_incomplete
+        message:
+          type: string
+          description: What to change on your Stripe webhook endpoint
+        missing_events:
+          type: array
+          items:
+            type: string
+          description: Stripe events missing on your endpoint `https://api.payviox.com/payment/stripe/webhook`
+    Subscription:
+      type: object
+      required:
+        - id
+        - status
+        - amount
+        - unit_amount
+        - currency
+        - interval
+        - interval_count
+        - interval_label
+        - order_id
+        - cycles_count
+        - cancel_at_period_end
+        - initial_session_id
+        - created_at
+      properties:
+        id:
+          type: string
+          description: Payviox subscription ID (`psub_` prefix)
+        status:
+          type: string
+          enum:
+            - active
+            - past_due
+            - canceled
+          description: >-
+            `active`: paid up, renews automatically (also while a cancellation is scheduled, see
+            `cancel_at_period_end`). `past_due`: the last renewal charge failed and Stripe is
+            retrying it. `canceled`: ended, no further charges.
+        amount:
+          type: integer
+          description: Your price per period in cents — the `amount` of the signup session
+        unit_amount:
+          type: integer
+          description: >-
+            Amount charged to the customer at each renewal, in cents. Includes the fees added for
+            the customer at checkout, but not one-time add-on fees (such as fraud screening)
+            charged on the first payment only, so it can be lower than the first charge.
+        currency:
+          type: string
+          description: Always `USD`
+        interval:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+            - year
+        interval_count:
+          type: integer
+        interval_label:
+          type: string
+          description: Human-readable period, e.g. `every month`, `every 3 months`
+        customer:
+          type: string
+          nullable: true
+          description: Customer identifier from the signup session
+        customer_email:
+          type: string
+          nullable: true
+          description: Customer email, from the signup session or entered at checkout
+        order_id:
+          type: string
+          description: '`order_id` of the signup session. Renewals use `{order_id}-{cycle}`'
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Items of the signup session (one period)
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Metadata of the signup session
+        payment_method:
+          type: string
+          enum:
+            - credit
+            - apple_pay
+            - google_pay
+          description: Method the customer subscribed with (read with `provider`)
+        provider:
+          type: string
+          description: Provider that charges the renewals (`stripe`)
+        provider_subscription_id:
+          type: string
+          nullable: true
+          description: >-
+            ID of the subscription on your Stripe account (`sub_...`). `null` until Payviox has
+            created it, usually within a minute of the first payment.
+        cycles_count:
+          type: integer
+          description: >-
+            Billing cycles started so far, signup included (1 = signup only). A renewal whose
+            charge failed counts too.
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            End of the current billing period: date of the next renewal charge, or the date a
+            scheduled cancellation takes effect
+        cancel_at_period_end:
+          type: boolean
+          description: '`true` when the subscription is scheduled to end at `current_period_end`'
+        canceled_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the subscription ended (`null` while not canceled)
+        canceled_by:
+          type: string
+          nullable: true
+          enum:
+            - api
+            - manager
+            - admin
+            - payer
+            - provider
+            - system
+            - null
+          description: >-
+            Who ended it: `api` (your backend), `manager` (your dashboard), `admin` (Payviox
+            support), `payer` (the customer, from the management link), `provider` (on Stripe,
+            e.g. after failed retries or a cancellation in the Stripe dashboard), `system`
+            (Payviox, e.g. signup payment refunded or `setup_failed`). `null` until the
+            subscription is canceled.
+        cancel_requested_by:
+          type: string
+          nullable: true
+          enum:
+            - payer
+            - api
+            - manager
+            - admin
+            - system
+            - null
+          description: >-
+            Who scheduled the end-of-period cancellation: `payer` (the customer), `api`,
+            `manager` (your dashboard), `admin` (Payviox support) or `system`. `null` when no
+            cancellation is scheduled, or when it was scheduled from your Stripe dashboard. Only
+            the same side can resume it: you (`api`, `manager`, `null`), the customer (`payer`)
+            or Payviox (`admin`, `system`).
+        cancellation_reason:
+          type: string
+          nullable: true
+          description: >-
+            Set as soon as a cancellation is requested or scheduled: `requested_by_merchant`,
+            `requested_by_customer`, `initial_payment_refunded`, `admin` (canceled by Payviox
+            support), `setup_failed:<code>`, or a Stripe reason such as `payment_failed`,
+            `cancellation_requested`, `provider` or `provider_deleted`. Treat unknown values as
+            informational.
+        initial_session_id:
+          type: string
+          description: Session ID of the signup payment
+        management_url:
+          type: string
+          nullable: true
+          description: >-
+            Customer self-service page (view, cancel at period end, undo). Share it with your
+            customer, e.g. in your confirmation email.
+        created_at:
+          type: string
+          format: date-time
+      example:
+        id: psub_8fKx2LmQp4ZrT7vW1nYc3aBd
+        status: active
+        amount: 999
+        unit_amount: 1029
+        currency: USD
+        interval: month
+        interval_count: 1
+        interval_label: every month
+        customer: customer_abc123
+        customer_email: john@example.com
+        order_id: order_12345
+        items:
+          - name: Pro plan
+            quantity: 1
+            price: 999
+        metadata:
+          user_id: usr_123
+        payment_method: credit
+        provider: stripe
+        provider_subscription_id: sub_1QxYz2AbCdEfGhIj
+        cycles_count: 2
+        current_period_end: '2026-12-13T10:30:00+00:00'
+        cancel_at_period_end: false
+        canceled_at: null
+        canceled_by: null
+        cancel_requested_by: null
+        cancellation_reason: null
+        initial_session_id: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+        management_url: https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD
+        created_at: '2026-10-13T10:30:00+00:00'
+    SubscriptionList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+        total:
+          type: integer
+          description: Number of subscriptions matching the filters
+        page:
+          type: integer
+        per_page:
+          type: integer
+    CancelSubscriptionRequest:
+      type: object
+      properties:
+        at_period_end:
+          type: boolean
+          default: true
+          description: >-
+            `true` (default, also when omitted, `null` or empty): the subscription ends at
+            `current_period_end`, the customer keeps the period already paid, and you can undo it
+            with resume. `false`: ends now and voids its unpaid Stripe invoices, so no retry can
+            charge the customer; no automatic refund.
 paths:
   /session:
     post:
@@ -254,9 +539,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateSessionResponse'
         '400':
-          description: Bad request
+          description: >-
+            Bad request — field validation errors (`{ "field": ["message"] }`), invalid
+            `subscription` terms, no subscription-capable payment method, Stripe keys not
+            configured, or `subscription_setup_incomplete` (Stripe webhook endpoint missing
+            renewal events)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
+                  - $ref: '#/components/schemas/SubscriptionSetupIncompleteError'
         '401':
           description: Unauthorized
+        '403':
+          description: '`subscription` sent with a Public API Key (pk_) — subscriptions require your Secret API Key'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_requires_secret_key
+                message: Subscriptions must be created from your server with your secret key (sk_). Create the session server-side, then open it with the SDK.
+        '429':
+          description: Too many session requests (see `retry_after`)
   /balance:
     get:
       operationId: getBalance
@@ -328,3 +638,241 @@ paths:
           description: Unauthorized
         '404':
           description: Session not found
+  /subscriptions:
+    get:
+      operationId: listSubscriptions
+      summary: List Subscriptions
+      description: List your subscriptions, newest first by default. Requires your Secret API Key.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - past_due
+              - canceled
+              - canceling
+          description: >-
+            Filter by status. `canceling` = not canceled yet but scheduled to end at
+            `current_period_end` (`cancel_at_period_end: true`). Other values are ignored.
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Case-insensitive partial match on subscription ID, customer, customer email or order_id
+        - name: customer
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Exact customer identifier, as passed when creating the signup session
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Results per page (capped at 100)
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - created_at
+              - current_period_end
+              - amount
+              - unit_amount
+            default: created_at
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - desc
+              - asc
+            default: desc
+      responses:
+        '200':
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionList'
+        '401':
+          description: Unauthorized (missing or invalid Secret API Key)
+  /subscriptions/{subscription_id}:
+    get:
+      operationId: getSubscription
+      summary: Get Subscription
+      description: Retrieve one subscription. Requires your Secret API Key.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Payviox subscription ID (`psub_...`)
+      responses:
+        '200':
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          description: Unauthorized (missing or invalid Secret API Key)
+        '404':
+          description: No subscription with this ID on your account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_not_found
+                message: No subscription with this id on your account.
+  /subscriptions/{subscription_id}/cancel:
+    post:
+      operationId: cancelSubscription
+      summary: Cancel Subscription
+      description: >-
+        Cancel a subscription at the end of the current period (default) or immediately.
+        Requires your Secret API Key.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Payviox subscription ID (`psub_...`)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSubscriptionRequest'
+            example:
+              at_period_end: true
+      responses:
+        '200':
+          description: Subscription updated (or already scheduled to cancel); returns the subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: '`at_period_end` is not a boolean (omitted, `null` or `""` mean `true`)'
+        '401':
+          description: Unauthorized (missing or invalid Secret API Key)
+        '404':
+          description: No subscription with this ID on your account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The subscription is already canceled, or changed during the request (retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_update_failed
+                message: This subscription is already canceled.
+        '502':
+          description: Stripe refused the change — contact support
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Stripe unreachable or not configured — retry later
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /subscriptions/{subscription_id}/resume:
+    post:
+      operationId: resumeSubscription
+      summary: Resume Subscription
+      description: >-
+        Undo a scheduled cancellation (`cancel_at_period_end: true`) so the subscription keeps
+        renewing. Only a cancellation scheduled on your side (`cancel_requested_by` `api`,
+        `manager` or `null`) can be resumed; one scheduled by the customer or by Payviox returns
+        403. Requires your Secret API Key.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Payviox subscription ID (`psub_...`)
+      responses:
+        '200':
+          description: Subscription resumed (or no cancellation was scheduled); returns the subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          description: Unauthorized (missing or invalid Secret API Key)
+        '404':
+          description: No subscription with this ID on your account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: >-
+            The cancellation was scheduled by the customer (`payer`) or by Payviox (`admin`,
+            `system`): only they can resume it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_update_failed
+                message: Your customer canceled this subscription. Only they can resume it, from their management link.
+        '409':
+          description: A canceled subscription can't be resumed, or it changed during the request (retry)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: subscription_update_failed
+                message: A canceled subscription cannot be resumed.
+        '502':
+          description: Stripe refused the change — contact support
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Stripe unreachable or not configured — retry later
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
