@@ -11,7 +11,7 @@ Stops the renewals of an `active` or `past_due` subscription. By default the sub
 | | `at_period_end: true` (default) | `at_period_end: false` |
 |---|---|---|
 | Further charges | None after `current_period_end` | None, from now — unpaid Stripe invoices of the subscription are voided, so no retry can charge the customer |
-| `status` right after the call | `active`, with `cancel_at_period_end: true` | `canceled` |
+| `status` right after the call | Unchanged (`active` or `past_due`), with `cancel_at_period_end: true` | `canceled` |
 | Can be undone | Yes, with [Resume Subscription](/api/endpoints/resume-subscription) until the period ends | No |
 | `cancel_requested_by` | `api` | unchanged |
 | `subscription_canceled` webhook | When the period ends | Right away |

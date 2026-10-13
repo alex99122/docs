@@ -343,7 +343,7 @@ curl -X POST https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd
     Your Stripe endpoint `https://api.payviox.com/payment/stripe/webhook` is missing, or lacks the events listed in `missing_events`. [Add them](#enable-the-stripe-renewal-events) in the right mode (test or live). The check is cached for up to an hour, so the error can persist briefly after you fix it.
   </Accordion>
 
-  <Accordion title="400 No payment method that supports subscriptions / Stripe is not fully configured">
+  <Accordion title="400 No payment method that supports subscriptions">
     Card, Apple Pay and Google Pay (Stripe) are all inactive on your account, or your Stripe publishable or secret key is missing in **Providers → Stripe**. Activate at least one of these methods and complete the Stripe keys. If you pass `paymentMethodId`, it must be one of these methods.
   </Accordion>
 

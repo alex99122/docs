@@ -333,7 +333,7 @@ Subscription-specific errors:
 - 403 `{ "error": "subscription_requires_secret_key", "message": "..." }` — `subscription` sent with a pk_ key.
 - 400 `{ "subscription": ["..."] }` — invalid terms (unknown interval, interval_count out of range), or no subscription-capable method active (card / Apple Pay / Google Pay via Stripe).
 - 400 `{ "paymentMethodId": ["..."] }` — forced method can't carry a subscription.
-- 400 `{ "subscription": ["Stripe is not fully configured on your account (public and secret keys)..."] }` — Stripe keys missing.
+- 400 `{ "subscription": ["No payment method that supports subscriptions is configured on your account... (public and secret keys)."] }` — Stripe keys missing.
 - 400 `{ "error": "subscription_setup_incomplete", "message": "...", "missing_events": ["invoice.paid", ...] }` — the merchant's Stripe webhook endpoint `https://api.payviox.com/payment/stripe/webhook` is missing or lacks renewal events. Result cached up to 1 hour.
 
 After creating a session, redirect the customer to: `https://secure.payviox.com/{session_id}`
