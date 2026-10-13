@@ -23,6 +23,12 @@
               "quickstart/examples",
               "quickstart/best-practices"
             ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/subscriptions"
+            ]
           }
         ]
       },
@@ -72,7 +78,11 @@
             "api/endpoints/create-session",
             "api/endpoints/get-payment-methods",
             "api/endpoints/get-balance",
-            "api/endpoints/get-payment-details"
+            "api/endpoints/get-payment-details",
+            "api/endpoints/list-subscriptions",
+            "api/endpoints/get-subscription",
+            "api/endpoints/cancel-subscription",
+            "api/endpoints/resume-subscription"
           ]
           }
         ]

@@ -1,10 +1,14 @@
 ---
 title: "createSession()"
-description: "SDK method createSession(sessionParameters, options). Takes amount, currency, customer, items, paymentMethodId, order_id. Options: redirect (boolean), iframeMode (boolean), iframeConfig. Returns session ID or void on redirect. Supports direct provider redirect"
+description: "SDK method createSession(sessionParameters, options). Takes amount, currency, customer, items, paymentMethodId, order_id. Options: redirect (boolean), iframeMode (boolean), iframeConfig. Returns session ID or void on redirect. Supports direct provider redirect. Not for subscriptions (secret key required: create them server-side, then openSession)"
 icon: "plus-circle"
 ---
 
 Creates a new payment session and optionally redirects or embeds an iframe.
+
+<Warning>
+  **Subscriptions can't be created with `createSession()`.** The SDK uses your public key, and a session with a `subscription` object requires your secret key: the call fails with `An error occured (subscription_requires_secret_key)`. Create subscription sessions on your server with [`POST /session`](/api/endpoints/create-session#subscriptions), then open them with [`openSession()`](/sdk/api-reference/open-session). See the [Subscriptions guide](/guides/subscriptions).
+</Warning>
 
 ```typescript
 async createSession(
