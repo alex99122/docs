@@ -671,7 +671,7 @@ Give access until the end of the last period you were paid for: on each `succeed
 
 ### Customer self-service
 
-`management_url` (webhook block + Subscription object, never expires): customer sees price, next payment, card; can cancel at period end and undo their own cancellation (not one scheduled by the merchant: the page tells them to contact the merchant). Shown after checkout but NOT emailed by Payviox — include it in the merchant's confirmation email. Anyone with the link can cancel. Customers can't change card, change plan or cancel immediately there.
+`management_url` (webhook block + Subscription object, never expires): customer sees price, next payment, card; can cancel at period end and undo their own cancellation (not one scheduled by the merchant: the page tells them to contact the merchant). NOT emailed by Payviox, and shown on the checkout success screen only when the payment succeeds immediately (not after a `pending_review` signup: the subscription only exists once `succeeded`) — the merchant must send `subscription.management_url` from the `succeeded` webhook in its confirmation email. Anyone with the link can cancel. Customers can't change card, change plan or cancel immediately there.
 
 ### Limits
 

@@ -199,7 +199,7 @@ Subscriptions follow the [recommended integration](/quickstart/integration-metho
   </Step>
 </Steps>
 
-On the payment page, the customer sees what they pay today, the recurring price and the date of the first renewal, and confirms an authorization such as *"By subscribing, you authorize Acme to charge your card $10.29 every month, starting November 13, 2026, until you cancel…"*. After paying, they see their next payment date and a link to manage the subscription.
+On the payment page, the customer sees what they pay today, the recurring price and the date of the first renewal, and confirms an authorization such as *"By subscribing, you authorize Acme to charge your card $10.29 every month, starting November 13, 2026, until you cancel…"*. When the payment succeeds right away, the success screen shows their next payment date and a link to manage the subscription.
 
 <Note>
   The customer is charged your `amount` plus the fees your account adds for the customer, exactly as for a one-time payment. The amount charged today can be slightly higher than the renewals: one-time add-on fees (such as fraud screening) only apply to the first payment. The renewal price is fixed at signup and returned as `unit_amount` on the [Subscription object](/api/endpoints/get-subscription#the-subscription-object).
@@ -260,7 +260,7 @@ Every subscription has a `management_url` (in the webhook `subscription` block a
 - **cancel at the end of the paid period** — they keep what they paid for;
 - **undo** their own cancellation before the period ends. If you scheduled the cancellation, the page tells them to contact you instead.
 
-The customer sees the link right after paying, but Payviox doesn't email it: **include it in your confirmation email** and in your account page. Customers can't change their card, switch plans or cancel immediately from this page.
+**Send it yourself: put `subscription.management_url` from the `succeeded` webhook in your confirmation email**, and show it in your account page. That's the reliable channel — Payviox doesn't email it, and the checkout success screen only shows it when the payment succeeds right away: if the signup payment goes to fraud review (`pending_review`), the subscription and its link only exist once the payment is `succeeded`, after the customer has left the page. Customers can't change their card, switch plans or cancel immediately from this page.
 
 <Warning>
   Treat the link like a password: it doesn't expire, and anyone who has it can cancel the subscription.
