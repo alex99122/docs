@@ -1,0 +1,292 @@
+---
+title: 'Get Subscription'
+openapi: 'GET /subscriptions/{subscription_id}'
+description: 'Retrieve one subscription by its psub_ ID with the secret key: status (active, past_due, canceled), price per period (amount, unit_amount), interval, current_period_end, cancel_at_period_end, cancellation details, Stripe subscription ID and the customer management_url. Defines the Subscription object'
+---
+
+## Overview
+
+Returns a subscription and its current state. Use it to check whether a customer's subscription is still running, when it renews, or whether a cancellation is scheduled.
+
+<Note>
+  All amounts are in **cents** (e.g., `999` = $9.99). Dates are ISO 8601 strings.
+</Note>
+
+## Authentication
+
+This endpoint requires your **Secret API Key** (server-side only). See [Authentication](/api/authentication) for details.
+
+```bash
+Authorization: Bearer sk_live_xxxxxxxxxxxx
+```
+
+<Warning>
+  Never expose your Secret API Key in client-side code. This endpoint should only be called from your backend server.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="subscription_id" type="string" required>
+  The Payviox subscription ID (`psub_...`), as received in the `subscription.id` field of your webhooks.
+</ParamField>
+
+## The Subscription object
+
+<ResponseField name="id" type="string" required>
+  Payviox subscription ID, prefixed with `psub_`.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  - `active`: paid up, renews automatically. A subscription with a scheduled cancellation stays `active` until it ends — check `cancel_at_period_end`.
+  - `past_due`: the last renewal charge failed and Stripe is retrying it.
+  - `canceled`: ended. No further charges.
+</ResponseField>
+
+<ResponseField name="amount" type="integer" required>
+  Your price per period, in cents — the `amount` of the signup session.
+</ResponseField>
+
+<ResponseField name="unit_amount" type="integer" required>
+  Amount charged to the customer at each renewal, in cents, fixed at signup. It includes the fees added for the customer at checkout, but not one-time add-on fees (such as fraud screening) charged on the first payment only — so it can be lower than what the customer paid at signup.
+</ResponseField>
+
+<ResponseField name="currency" type="string" required>
+  Always `USD`.
+</ResponseField>
+
+<ResponseField name="interval" type="string" required>
+  `day`, `week`, `month` or `year`.
+</ResponseField>
+
+<ResponseField name="interval_count" type="integer" required>
+  Number of intervals between two charges.
+</ResponseField>
+
+<ResponseField name="interval_label" type="string" required>
+  Human-readable period, e.g. `every month` or `every 3 months`.
+</ResponseField>
+
+<ResponseField name="customer" type="string">
+  Customer identifier, as passed when creating the signup session.
+</ResponseField>
+
+<ResponseField name="customer_email" type="string">
+  Customer email — the `email` passed when creating the signup session, or the one entered at checkout. Can be `null`.
+</ResponseField>
+
+<ResponseField name="order_id" type="string" required>
+  `order_id` of the signup session. Renewal payments use `{order_id}-{cycle}` (e.g. `order_12345-2`).
+</ResponseField>
+
+<ResponseField name="items" type="array">
+  Items of the signup session (one period).
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Custom metadata of the signup session. It's also sent with every renewal webhook.
+</ResponseField>
+
+<ResponseField name="payment_method" type="string">
+  Method the customer subscribed with: `credit`, `apple_pay` or `google_pay`.
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  Provider that charges the renewals: `stripe`.
+</ResponseField>
+
+<ResponseField name="provider_subscription_id" type="string">
+  ID of the subscription on **your** Stripe account (`sub_...`). `null` until Payviox has created it, usually within a minute of the first payment.
+</ResponseField>
+
+<ResponseField name="cycles_count" type="integer" required>
+  Billing cycles started so far, signup included: `1` after signup, `2` after the first renewal, and so on. A renewal whose charge failed counts too.
+</ResponseField>
+
+<ResponseField name="current_period_end" type="string">
+  End of the current billing period: when the next renewal is charged, or when a scheduled cancellation takes effect.
+</ResponseField>
+
+<ResponseField name="cancel_at_period_end" type="boolean" required>
+  `true` when the subscription is scheduled to end at `current_period_end` (by you or by the customer). It can be undone with [Resume Subscription](/api/endpoints/resume-subscription).
+</ResponseField>
+
+<ResponseField name="canceled_at" type="string">
+  When the subscription ended. `null` while it isn't canceled.
+</ResponseField>
+
+<ResponseField name="canceled_by" type="string">
+  Who ended it, once `status` is `canceled` (`null` before):
+  `api` (your backend), `manager` (your dashboard), `admin` (Payviox support), `payer` (the customer, from the management link), `provider` (on Stripe — after all renewal retries failed, or canceled from your Stripe dashboard), `system` (Payviox — the signup payment was refunded, or the subscription couldn't be created on Stripe: `setup_failed`).
+</ResponseField>
+
+<ResponseField name="cancellation_reason" type="string">
+  Set as soon as a cancellation is requested or scheduled. Common values: `requested_by_merchant`, `requested_by_customer`, `initial_payment_refunded`, `payment_failed` (Stripe stopped retrying), `setup_failed:<code>` (Payviox couldn't create the subscription on Stripe after the first payment). Treat unknown values as informational.
+</ResponseField>
+
+<ResponseField name="initial_session_id" type="string" required>
+  Session ID of the signup payment.
+</ResponseField>
+
+<ResponseField name="management_url" type="string">
+  Self-service page where the customer can see the subscription, cancel it at the end of the paid period, and undo that cancellation. Share it with your customer, for example in your confirmation email.
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  When the subscription was created (after the first payment succeeded).
+</ResponseField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxx"
+```
+
+```javascript Node.js
+const response = await fetch(
+  'https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd',
+  { headers: { Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}` } }
+);
+
+const subscription = await response.json();
+console.log(subscription.status);             // "active"
+console.log(subscription.current_period_end); // "2026-12-13T10:30:00+00:00"
+```
+
+```python Python
+import os
+import requests
+
+response = requests.get(
+    'https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd',
+    headers={'Authorization': f"Bearer {os.environ['PAYVIOX_SECRET_KEY']}"}
+)
+
+subscription = response.json()
+print(subscription['status'])  # "active"
+```
+
+```php PHP
+<?php
+
+$ch = curl_init('https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . getenv('PAYVIOX_SECRET_KEY')
+]);
+
+$subscription = json_decode(curl_exec($ch), true);
+curl_close($ch);
+
+echo $subscription['status']; // "active"
+```
+
+</CodeGroup>
+
+## Example Response
+
+<ResponseExample>
+
+```json Active (200)
+{
+  "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+  "status": "active",
+  "amount": 999,
+  "unit_amount": 1029,
+  "currency": "USD",
+  "interval": "month",
+  "interval_count": 1,
+  "interval_label": "every month",
+  "customer": "customer_abc123",
+  "customer_email": "john@example.com",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "metadata": { "user_id": "usr_123" },
+  "payment_method": "credit",
+  "provider": "stripe",
+  "provider_subscription_id": "sub_1QxYz2AbCdEfGhIj",
+  "cycles_count": 2,
+  "current_period_end": "2026-12-13T10:30:00+00:00",
+  "cancel_at_period_end": false,
+  "canceled_at": null,
+  "canceled_by": null,
+  "cancellation_reason": null,
+  "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
+  "created_at": "2026-10-13T10:30:00+00:00"
+}
+```
+
+```json Canceled by the customer (200)
+{
+  "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+  "status": "canceled",
+  "amount": 999,
+  "unit_amount": 1029,
+  "currency": "USD",
+  "interval": "month",
+  "interval_count": 1,
+  "interval_label": "every month",
+  "customer": "customer_abc123",
+  "customer_email": "john@example.com",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "metadata": { "user_id": "usr_123" },
+  "payment_method": "credit",
+  "provider": "stripe",
+  "provider_subscription_id": "sub_1QxYz2AbCdEfGhIj",
+  "cycles_count": 3,
+  "current_period_end": "2027-01-13T10:30:00+00:00",
+  "cancel_at_period_end": true,
+  "canceled_at": "2027-01-13T10:30:04+00:00",
+  "canceled_by": "payer",
+  "cancellation_reason": "requested_by_customer",
+  "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
+  "created_at": "2026-10-13T10:30:00+00:00"
+}
+```
+
+```json Not Found (404)
+{
+  "error": "subscription_not_found",
+  "message": "No subscription with this id on your account."
+}
+```
+
+```json Unauthorized (401)
+{
+  "error": "Unauthorized"
+}
+```
+
+</ResponseExample>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="401 -- Unauthorized">
+    The API key is missing or invalid. This endpoint only accepts your **Secret API Key**.
+  </Accordion>
+
+  <Accordion title="404 -- Subscription not found">
+    No subscription with this ID belongs to your business. Subscriptions of other businesses are reported as not found too.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Subscriptions guide" icon="arrows-rotate" href="/guides/subscriptions">
+    End-to-end flow: Stripe setup, signup, renewals, cancellation
+  </Card>
+  <Card title="List Subscriptions" icon="list" href="/api/endpoints/list-subscriptions">
+    Filter by status or customer, paginate
+  </Card>
+</CardGroup>

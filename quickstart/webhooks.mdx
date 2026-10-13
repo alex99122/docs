@@ -1,6 +1,6 @@
 ---
 title: "Understanding Webhooks"
-description: "Learn how webhooks work for payment notifications"
+description: "Learn how webhooks work for payment notifications: event types (succeeded, pending_review, declined, refunded, expired, incomplete, subscription_payment_failed, subscription_canceled), payload example and the payment lifecycle"
 icon: "webhook"
 ---
 
@@ -69,7 +69,7 @@ Respond with HTTP 200 status to acknowledge receipt of the webhook
 ```
 
 <Tip>
-The `type` field indicates the payment event type: `succeeded`, `pending_review`, `declined`, `refunded`, `expired`, `incomplete`. The `fees` field indicates total fees in the smallest currency unit - customer pays `amount + fees = total`. On `incomplete` events, an `amount_remaining` field indicates how much is still due.
+The `type` field indicates the event type: `succeeded`, `pending_review`, `declined`, `refunded`, `expired`, `incomplete`, and for [subscriptions](/guides/subscriptions) `subscription_payment_failed` and `subscription_canceled`. Subscription payments also carry a `subscription` block, and each renewal arrives as a new `succeeded` with `order_id` `{order_id}-{cycle}`. The `fees` field indicates total fees in the smallest currency unit - customer pays `amount + fees = total`. On `incomplete` events, an `amount_remaining` field indicates how much is still due.
 </Tip>
 
 <Info>
@@ -88,6 +88,8 @@ Payviox sends different webhook events based on the payment lifecycle:
 | `refunded` | Refund processed for a transaction | 📦 Handle return/cancellation |
 | `expired` | Payment session expired without completion | 🕐 Clean up pending order |
 | `incomplete` | Crypto payment underpaid — includes `amount_remaining` (opt-in event) | ⏳ Do NOT fulfill — wait for `succeeded` |
+| `subscription_payment_failed` | A subscription renewal charge failed — includes `failure_reason` (opt-in event) | 🔁 Stripe retries; notify the customer |
+| `subscription_canceled` | A subscription ended, no further charges (opt-in event) | 🛑 Revoke access after the last paid period |
 
 <Warning>
 **Important:** If you receive `pending_review`, do NOT ship or fulfill the order until you receive either `succeeded` or `declined`.

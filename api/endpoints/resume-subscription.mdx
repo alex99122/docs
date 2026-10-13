@@ -1,0 +1,144 @@
+---
+title: 'Resume Subscription'
+openapi: 'POST /subscriptions/{subscription_id}/resume'
+description: 'Undo a scheduled cancellation (cancel_at_period_end=true) with the secret key, so the subscription keeps renewing. Returns the Subscription. Errors: 409 when the subscription is already canceled (cannot be resumed), 502 Stripe refused, 503 Stripe unreachable'
+---
+
+## Overview
+
+Undoes a cancellation scheduled at the end of the period — by you, from the dashboard, or by the customer from their management link. The subscription keeps renewing as before.
+
+<Note>
+  Only a **scheduled** cancellation can be undone. Once a subscription is `canceled` (it reached `current_period_end`, or it was canceled immediately), it can't be resumed: have the customer subscribe again with a new session.
+</Note>
+
+## Authentication
+
+This endpoint requires your **Secret API Key** (server-side only). See [Authentication](/api/authentication) for details.
+
+```bash
+Authorization: Bearer sk_live_xxxxxxxxxxxx
+```
+
+## Path Parameters
+
+<ParamField path="subscription_id" type="string" required>
+  The Payviox subscription ID (`psub_...`).
+</ParamField>
+
+## Response
+
+The updated [Subscription object](/api/endpoints/get-subscription#the-subscription-object), with `cancel_at_period_end: false` and `cancellation_reason: null`. If no cancellation was scheduled, it returns `200` without changing anything.
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/resume \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxx" \
+  -X POST
+```
+
+```javascript Node.js
+const response = await fetch(
+  'https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/resume',
+  {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}` },
+  }
+);
+
+const subscription = await response.json();
+console.log(subscription.cancel_at_period_end); // false
+```
+
+```python Python
+import os
+import requests
+
+response = requests.post(
+    'https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/resume',
+    headers={'Authorization': f"Bearer {os.environ['PAYVIOX_SECRET_KEY']}"}
+)
+
+print(response.json()['cancel_at_period_end'])  # False
+```
+
+</CodeGroup>
+
+## Example Response
+
+<ResponseExample>
+
+```json Resumed (200)
+{
+  "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+  "status": "active",
+  "amount": 999,
+  "unit_amount": 1029,
+  "currency": "USD",
+  "interval": "month",
+  "interval_count": 1,
+  "interval_label": "every month",
+  "customer": "customer_abc123",
+  "customer_email": "john@example.com",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "metadata": { "user_id": "usr_123" },
+  "payment_method": "credit",
+  "provider": "stripe",
+  "provider_subscription_id": "sub_1QxYz2AbCdEfGhIj",
+  "cycles_count": 2,
+  "current_period_end": "2026-12-13T10:30:00+00:00",
+  "cancel_at_period_end": false,
+  "canceled_at": null,
+  "canceled_by": null,
+  "cancellation_reason": null,
+  "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
+  "created_at": "2026-10-13T10:30:00+00:00"
+}
+```
+
+```json Already Canceled (409)
+{
+  "error": "subscription_update_failed",
+  "message": "A canceled subscription cannot be resumed."
+}
+```
+
+```json Provider Unreachable (503)
+{
+  "error": "subscription_update_failed",
+  "message": "The payment provider is unreachable. Try again in a moment."
+}
+```
+
+</ResponseExample>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="401 -- Unauthorized">
+    The API key is missing or invalid. This endpoint only accepts your **Secret API Key**.
+  </Accordion>
+
+  <Accordion title="404 -- Subscription not found">
+    No subscription with this ID belongs to your business (`subscription_not_found`).
+  </Accordion>
+
+  <Accordion title="409 -- Already canceled">
+    The subscription has already ended and can't be resumed.
+  </Accordion>
+
+  <Accordion title="502 -- Provider refused">
+    Stripe refused the change. Nothing was changed on Payviox's side: contact [support@payviox.com](mailto:support@payviox.com).
+  </Accordion>
+
+  <Accordion title="503 -- Provider unreachable">
+    Stripe couldn't be reached, or Stripe isn't configured on your account anymore. Nothing was changed: retry later.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,190 @@
+---
+title: 'Cancel Subscription'
+openapi: 'POST /subscriptions/{subscription_id}/cancel'
+description: 'Cancel a subscription with the secret key. at_period_end=true (default) schedules the end at current_period_end — the customer keeps the paid period and it can be undone with resume; at_period_end=false ends it now with no refund. Returns the Subscription. Errors: 409 already canceled, 502 Stripe refused, 503 Stripe unreachable'
+---
+
+## Overview
+
+Stops the renewals of an `active` or `past_due` subscription. By default the subscription ends at the end of the period the customer already paid for; pass `at_period_end: false` to end it immediately — this also works on a subscription already scheduled to end.
+
+| | `at_period_end: true` (default) | `at_period_end: false` |
+|---|---|---|
+| Further charges | None after `current_period_end` | None, from now |
+| `status` right after the call | `active`, with `cancel_at_period_end: true` | `canceled` |
+| Can be undone | Yes, with [Resume Subscription](/api/endpoints/resume-subscription) until the period ends | No |
+| `subscription_canceled` webhook | When the period ends | Right away |
+| Refund of the current period | — | None (no automatic refund) |
+
+<Tip>
+  Customers can cancel by themselves (at period end only) from the `management_url` of their subscription — you don't need to build a cancellation flow. See [Let customers manage their subscription](/guides/subscriptions#let-customers-manage-their-subscription).
+</Tip>
+
+## Authentication
+
+This endpoint requires your **Secret API Key** (server-side only). See [Authentication](/api/authentication) for details.
+
+```bash
+Authorization: Bearer sk_live_xxxxxxxxxxxx
+```
+
+## Path Parameters
+
+<ParamField path="subscription_id" type="string" required>
+  The Payviox subscription ID (`psub_...`).
+</ParamField>
+
+## Body Parameters
+
+<ParamField body="at_period_end" type="boolean" default="true">
+  `true` to end the subscription at `current_period_end`, `false` to end it now. Send a JSON boolean (`true` / `false`).
+</ParamField>
+
+## Response
+
+The updated [Subscription object](/api/endpoints/get-subscription#the-subscription-object). Calling it again with `at_period_end: true` on a subscription already scheduled to end returns `200` without changing anything.
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL (at period end)
+curl https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/cancel \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxx" \
+  -X POST
+```
+
+```bash cURL (immediately)
+curl https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/cancel \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{ "at_period_end": false }'
+```
+
+```javascript Node.js
+async function cancelSubscription(subscriptionId, { now = false } = {}) {
+  const response = await fetch(
+    `https://api.payviox.com/subscriptions/${subscriptionId}/cancel`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYVIOX_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ at_period_end: !now }),
+    }
+  );
+
+  if (response.status === 503) {
+    throw new Error('Stripe unreachable, retry later'); // safe to retry
+  }
+  if (!response.ok) {
+    const { error, message } = await response.json();
+    throw new Error(`${error}: ${message}`);
+  }
+  return response.json(); // Subscription
+}
+```
+
+```python Python
+import os
+import requests
+
+response = requests.post(
+    'https://api.payviox.com/subscriptions/psub_8fKx2LmQp4ZrT7vW1nYc3aBd/cancel',
+    headers={'Authorization': f"Bearer {os.environ['PAYVIOX_SECRET_KEY']}"},
+    json={'at_period_end': True}
+)
+
+subscription = response.json()
+print(subscription['cancel_at_period_end'])  # True
+```
+
+</CodeGroup>
+
+## Example Response
+
+<ResponseExample>
+
+```json Scheduled (200)
+{
+  "id": "psub_8fKx2LmQp4ZrT7vW1nYc3aBd",
+  "status": "active",
+  "amount": 999,
+  "unit_amount": 1029,
+  "currency": "USD",
+  "interval": "month",
+  "interval_count": 1,
+  "interval_label": "every month",
+  "customer": "customer_abc123",
+  "customer_email": "john@example.com",
+  "order_id": "order_12345",
+  "items": [
+    { "name": "Pro plan", "quantity": 1, "price": 999 }
+  ],
+  "metadata": { "user_id": "usr_123" },
+  "payment_method": "credit",
+  "provider": "stripe",
+  "provider_subscription_id": "sub_1QxYz2AbCdEfGhIj",
+  "cycles_count": 2,
+  "current_period_end": "2026-12-13T10:30:00+00:00",
+  "cancel_at_period_end": true,
+  "canceled_at": null,
+  "canceled_by": null,
+  "cancellation_reason": "requested_by_merchant",
+  "initial_session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "management_url": "https://secure.payviox.com/subscription/k3Jd9QwL2xVb7NmP4tRz8YcF1sHg6UaE5oWi0qXn3BvM7ZpD",
+  "created_at": "2026-10-13T10:30:00+00:00"
+}
+```
+
+```json Already Canceled (409)
+{
+  "error": "subscription_update_failed",
+  "message": "This subscription is already canceled."
+}
+```
+
+```json Provider Unreachable (503)
+{
+  "error": "subscription_update_failed",
+  "message": "The payment provider is unreachable. Try again in a moment."
+}
+```
+
+```json Invalid Body (400)
+{
+  "at_period_end": ["at_period_end must be a boolean."]
+}
+```
+
+</ResponseExample>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 -- Invalid at_period_end">
+    `at_period_end` isn't a boolean.
+  </Accordion>
+
+  <Accordion title="401 -- Unauthorized">
+    The API key is missing or invalid. This endpoint only accepts your **Secret API Key**.
+  </Accordion>
+
+  <Accordion title="404 -- Subscription not found">
+    No subscription with this ID belongs to your business (`subscription_not_found`).
+  </Accordion>
+
+  <Accordion title="409 -- Already canceled">
+    The subscription has already ended. Nothing to do.
+  </Accordion>
+
+  <Accordion title="502 -- Provider refused">
+    Stripe refused the change. Nothing was changed on Payviox's side: contact [support@payviox.com](mailto:support@payviox.com).
+  </Accordion>
+
+  <Accordion title="503 -- Provider unreachable">
+    Stripe couldn't be reached, or Stripe isn't configured on your account anymore. Nothing was changed: retry later.
+  </Accordion>
+</AccordionGroup>

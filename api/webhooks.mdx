@@ -8,7 +8,7 @@ description: 'Learn how to receive and verify webhook notifications from Payviox
 Webhooks allow Payviox to send real-time notifications to your server when payment events occur. When a payment is processed, Payviox sends an HTTP POST request to your configured webhook URL with the payment details.
 
 <Info>
-  Webhooks are essential for keeping your application synchronized with payment statuses. Configure your webhook URL in the [Payviox Dashboard](https://dash.payviox.com) under **Settings** > **Webhooks**.
+  Webhooks are essential for keeping your application synchronized with payment statuses. Configure your webhook URL in the [Payviox Dashboard](https://dash.payviox.com) under **Developers** > **Webhooks**.
 </Info>
 
 ## Webhook Configuration
@@ -20,7 +20,7 @@ Webhooks allow Payviox to send real-time notifications to your server when payme
     Create an endpoint on your server to receive POST requests (e.g., `https://yourdomain.com/api/webhook`)
   </Step>
   <Step title="Add URL to Dashboard">
-    Go to your [Payviox Dashboard](https://dash.payviox.com) and navigate to **Settings** > **Webhooks**
+    Go to your [Payviox Dashboard](https://dash.payviox.com) and navigate to **Developers** > **Webhooks**
   </Step>
   <Step title="Enter Your Webhook URL">
     Paste your endpoint URL in the webhook URL field
@@ -105,6 +105,10 @@ Payviox sends webhooks with the following structure:
   - `refunded`: A refund has been processed for this transaction.
   - `expired`: Payment session expired without completion.
   - `incomplete`: A crypto payment came in short (the customer sent less than the requested amount). Opt-in event — enable it in your webhook settings. Includes `amount_remaining` (how much is still due). Do NOT fulfill until you receive `succeeded`.
+  - `subscription_payment_failed`: A subscription renewal charge failed. Opt-in event. Includes `failure_reason`.
+  - `subscription_canceled`: A subscription ended, no further charges. Opt-in event.
+
+  Subscription payments also carry a `subscription` object, and renewals arrive as `succeeded` with `order_id` `{order_id}-{cycle}`. See [Subscription events](/webhooks/integration#subscription-events).
 </ParamField>
 
 <ParamField path="provider" type="string" required>

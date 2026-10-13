@@ -8,11 +8,14 @@ Two variations: SDK on its own with `createSession()` and the public key (`pk_`)
 
 All amounts are in cents. Payments are confirmed asynchronously via webhooks with HMAC-SHA256 signature verification — the redirect back to the merchant site is not a confirmation.
 
+Recurring billing: add a `subscription` object (`interval`, `interval_count`) to `POST /session` with the secret key; the customer pays the first period on the payment page, then renewals are charged by Stripe Billing on the merchant's own Stripe account (card, Apple Pay, Google Pay only).
+
 ## Getting Started
 - [Overview](https://docs.payviox.com/quickstart/overview.md): Complete payment flow diagram and step-by-step from session creation to webhook confirmation
 - [Choose Integration Method](https://docs.payviox.com/quickstart/integration-methods.md): The recommended backend-session + SDK pattern with code, its two variations (SDK-only, API-only), and a comparison table
 - [Complete Examples](https://docs.payviox.com/quickstart/examples.md): Full working code for SDK redirect, REST API session creation, and webhook handlers in JS, PHP, and Python
 - [Security Best Practices](https://docs.payviox.com/quickstart/best-practices.md): API key management, webhook verification, PCI compliance, and error handling guidelines
+- [Subscriptions guide](https://docs.payviox.com/guides/subscriptions.md): Recurring billing end to end — Stripe prerequisites (card/Apple Pay/Google Pay + 5 webhook events on https://api.payviox.com/payment/stripe/webhook), server-side session with `subscription` + `openSession()`, webhooks per cycle (`order_id` `{order_id}-{cycle}`), failed renewals, cancellation, customer `management_url`, limits and testing
 
 ## JavaScript SDK (recommended for the browser side of the integration)
 - [Installation](https://docs.payviox.com/sdk/installation.md): CDN script tag (`https://sdk.payviox.com/payviox.js`) or npm install `@payviox/sdk`
@@ -24,12 +27,17 @@ All amounts are in cents. Payments are confirmed asynchronously via webhooks wit
 
 ## REST API (server side of the recommended pattern, and standalone when there is no browser)
 - [Authentication](https://docs.payviox.com/api/authentication.md): Bearer token auth with public key (pk_) for client-side or secret key (sk_) for server-side. Secret key enables IP fraud prevention parameter
-- [POST /session](https://docs.payviox.com/api/endpoints/create-session.md): Create payment session with amount, currency, items, order_id. Called from the backend in the recommended pattern. Optional paymentMethodId for direct provider redirect, optional ip parameter for fraud prevention
+- [POST /session](https://docs.payviox.com/api/endpoints/create-session.md): Create payment session with amount, currency, items, order_id. Called from the backend in the recommended pattern. Optional paymentMethodId for direct provider redirect, optional ip parameter for fraud prevention, optional `subscription` object (`interval` day/week/month/year, `interval_count`; secret key only — 403 `subscription_requires_secret_key` with pk_, 400 `subscription_setup_incomplete` with `missing_events`)
 - [GET /payments/methods](https://docs.payviox.com/api/endpoints/get-payment-methods.md): List available payment methods filtered by country and currency. Returns method IDs, names, fees, and geographic availability
 - [GET /balance](https://docs.payviox.com/api/endpoints/get-balance.md): Retrieve business balance and payout balance in cents. Requires secret API key
+- [GET /payment/{session_id}](https://docs.payviox.com/api/endpoints/get-payment-details.md): Payment details (status, amount, fees, net amount, method, customer and card details) for reconciliation. Requires secret API key
+- [GET /subscriptions](https://docs.payviox.com/api/endpoints/list-subscriptions.md): List subscriptions — filters `status` (active, past_due, canceled, canceling), `search`, `customer`; `page`/`per_page` (max 100); `sort_by` created_at/current_period_end/amount. Requires secret API key
+- [GET /subscriptions/{id}](https://docs.payviox.com/api/endpoints/get-subscription.md): One subscription (`psub_` ID) and the full Subscription object: status, amount, unit_amount, interval, current_period_end, cancel_at_period_end, canceled_by, management_url. Requires secret API key
+- [POST /subscriptions/{id}/cancel](https://docs.payviox.com/api/endpoints/cancel-subscription.md): Cancel at period end (`at_period_end` default true, undoable) or immediately (`false`, no refund). 409 already canceled, 502/503 Stripe errors. Requires secret API key
+- [POST /subscriptions/{id}/resume](https://docs.payviox.com/api/endpoints/resume-subscription.md): Undo a scheduled cancellation. 409 if already canceled. Requires secret API key
 
 ## Webhooks
-- [Webhook Integration](https://docs.payviox.com/webhooks/integration.md): Receive HTTP POST payment events (succeeded, pending_review, declined, refunded, expired). HMAC-SHA256 signature verification. Retry policy: 4 attempts over 30 minutes. Idempotency via order_id
+- [Webhook Integration](https://docs.payviox.com/webhooks/integration.md): Receive HTTP POST payment events (succeeded, pending_review, declined, refunded, expired, incomplete) and opt-in subscription events (subscription_payment_failed with `failure_reason`, subscription_canceled). Subscription payments carry a `subscription` block (id, status, cycle, current_period_end, management_url); renewals arrive as `succeeded` with `order_id` `{order_id}-{cycle}`. HMAC-SHA256 signature verification. Retry policy: 4 attempts over 30 minutes. Idempotency via order_id
 
 ## API Specs
 - [OpenAPI Specification](https://docs.payviox.com/api-reference.yaml): Full OpenAPI 3.0 spec for all endpoints
