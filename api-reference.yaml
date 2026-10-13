@@ -697,6 +697,7 @@ paths:
               - created_at
               - current_period_end
               - amount
+              - unit_amount
             default: created_at
         - name: sort_order
           in: query
