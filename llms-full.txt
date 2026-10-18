@@ -308,6 +308,7 @@ Request body:
 | `items` | array | yes | `[{ name, quantity, price }]` |
 | `metadata` | object | no | Custom key-value pairs |
 | `ip` | string | no | Client IP (secret key only). If provided, IP is validated at payment time. |
+| `email` | string | no | Customer email. When provided, the payment page does not ask the customer for it (receipt email, Stripe Customer, fraud screening). Invalid address → 400. |
 | `paymentMethodId` | string | no | If set to a redirect-based provider, response includes `redirect_url`. |
 | `email` | string | no | Customer email. Stored on the session (and on a subscription as `customer_email`). |
 | `subscription` | object | no | Secret key only. `{ "interval": "day"\|"week"\|"month"\|"year", "interval_count": 1 }` — makes the session a subscription signup; `amount` = price per period. See Subscriptions. |

@@ -280,6 +280,7 @@ curl https://api.payviox.com/session \
     "amount": 10000,
     "currency": "USD",
     "customer": "customer_abc123",
+    "email": "john@example.com",
     "order_id": "order_12345",
     "description": "Premium subscription",
     "ip": "203.0.113.42",
@@ -309,6 +310,7 @@ app.post('/create-payment', async (req, res) => {
       amount: 10000,
       currency: 'USD',
       customer: req.body.customer,
+      email: req.body.email,
       order_id: 'order_' + Date.now(),
       description: 'Premium subscription',
       ip: clientIp,
@@ -342,6 +344,7 @@ def create_payment():
             'amount': 10000,
             'currency': 'USD',
             'customer': request.json['customer'],
+            'email': request.json.get('email'),
             'order_id': f'order_{int(time.time())}',
             'description': 'Premium subscription',
             'ip': client_ip,
@@ -366,6 +369,7 @@ Route::post('/create-payment', function (Request $request) {
         'amount' => 10000,
         'currency' => 'USD',
         'customer' => $request->input('customer'),
+        'email' => $request->input('email'),
         'order_id' => 'order_' . time(),
         'description' => 'Premium subscription',
         'ip' => $clientIp,
@@ -382,6 +386,16 @@ Route::post('/create-payment', function (Request $request) {
 <Tip>
   **Without IP parameter:** If you don't provide the `ip` parameter in server-side requests, no IP validation will be performed at payment time. This is useful when you can't reliably determine the client's IP.
 </Tip>
+
+### Customer email
+
+If you already know your customer's email, pass it as `email`. The payment page then **does not ask the customer for it**: Payviox uses it as the receipt email and on the Stripe Customer, and sends it to fraud screening when the payment method doesn't carry one.
+
+<Note>
+  `email` must be a valid email address, otherwise the request is rejected with a `400`. It is optional: without it, the payment page asks the customer for their email on card, Apple Pay, Google Pay and the other Stripe methods.
+
+  `customer` is your own identifier and is never read as an email, even when it looks like one: pass the address in `email`.
+</Note>
 
 ## Direct Redirect (Skip Payment Page)
 

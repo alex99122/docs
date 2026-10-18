@@ -25,7 +25,8 @@ app.post('/api/checkout', async (req, res) => {
     body: JSON.stringify({
       amount: cart.totalCents,
       currency: 'USD',
-      customer: req.user.email,
+      customer: req.user.id,
+      email: req.user.email, // the payment page won't ask for it
       description: `Order #${cart.id}`,
       order_id: `order_${cart.id}`,
       ip: req.ip, // fraud prevention — requires the secret key
