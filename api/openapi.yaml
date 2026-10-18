@@ -79,7 +79,12 @@ components:
           type: string
           format: email
           maxLength: 255
-          description: Optional customer email address. Stored on the session, and on the subscription as `customer_email`
+          description: >-
+            Optional customer email address. When provided, the payment page does not ask the
+            customer for it: it becomes the Stripe receipt email and the Stripe Customer email,
+            and is used for fraud screening when the payment method doesn't carry one. Must be a
+            valid email address, otherwise the request is rejected with a 400. Stored on the
+            subscription as `customer_email`.
         subscription:
           nullable: true
           allOf:
