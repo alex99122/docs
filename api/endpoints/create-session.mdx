@@ -632,7 +632,7 @@ The response is the usual `{ "session_id": "...", "checkout_url": "..." }` (201)
 
 ## Example Response
 
-Every successful response (201) carries `checkout_url`, the payment page for this session. It points to `https://secure.payviox.com/{session_id}`, or to your own subdomain once a [custom checkout domain](/guides/custom-checkout-domain) is active. Send the customer to this URL rather than building it yourself: connecting or removing a custom domain then needs no change on your side.
+Every successful response (201) carries `checkout_url`, the payment page for this session. It points to `https://secure.payviox.com/{session_id}`, or to your own subdomain once a [custom checkout domain](/guides/custom-checkout-domain) is active. Send the customer to this URL rather than building it yourself: connecting or removing a custom domain then needs no change on your side. The URL is set when the session is created and is present in every 201 response, including those with `redirect_url` or `payment_error`: only sessions created after the domain becomes **Active** (or after you remove it) use the new address.
 
 <ResponseExample>
 

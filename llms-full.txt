@@ -80,8 +80,8 @@ Then send the customer to the `checkout_url` returned by `POST /session` yoursel
 | Web checkout, merchant has a backend | Backend `POST /session` (sk_) + SDK `openSession(session_id)` |
 | Web app with no backend at all | SDK `createSession(params, { redirect: true })` with pk_ |
 | Embedded payment form | Backend `POST /session` (sk_) + SDK `openIframe(session_id, { iframeTarget })` |
-| Backend-only, no browser | REST API + send customer to `https://secure.payviox.com/{session_id}` |
-| Emailed payment link | REST API + link to `https://secure.payviox.com/{session_id}` |
+| Backend-only, no browser | REST API + send customer to `checkout_url` from the response |
+| Emailed payment link | REST API + link to `checkout_url` from the response |
 | Skip Payviox payment page | REST API with `paymentMethodId` for a redirect-based provider |
 | Mobile app | REST API from your backend |
 | Non-JS stack with a web frontend | Backend `POST /session` (sk_) + SDK `openSession(session_id)` |
@@ -616,7 +616,7 @@ Signature verification is identical to payment webhooks but uses the payout webh
 
 1. Backend calls `POST /session` with the secret key, customer IP and `subscription: { interval: 'month', interval_count: 1 }` (`amount` = price per period)
 2. Return `session_id` to frontend
-3. Frontend calls `payviox.openSession(session_id)`, or redirects to `https://secure.payviox.com/{session_id}` if the SDK isn't loaded
+3. Frontend calls `payviox.openSession(session_id)`, or redirects to `checkout_url` (from `POST /session`) if the SDK isn't loaded
 4. Webhook `succeeded` with `subscription.cycle = 1` → store `subscription.id`, give access until `subscription.current_period_end`, email the customer the `subscription.management_url`
 5. Each renewal: `succeeded` with `order_id` `{order_id}-{cycle}` → extend access to the new `current_period_end`
 6. `subscription_canceled` → revoke access after the last paid period
