@@ -112,14 +112,23 @@ Once the status is **Active**, the tab shows ready-to-copy snippets with your ow
 
 ### Without the SDK: redirect or iframe
 
-If you send customers to the payment page yourself (HTTP redirect, payment link, or iframe), replace the host in the URL:
+If you send customers to the payment page yourself (HTTP redirect, payment link, or iframe), use the `checkout_url` returned by [`POST /session`](/api/endpoints/create-session). Once your domain is active, it already points to your subdomain:
+
+```json
+{
+  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "checkout_url": "https://pay.yourstore.com/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+}
+```
+
+If your integration already uses `checkout_url`, you have nothing to change: new sessions go to your subdomain as soon as the domain is **Active**. If you build the URL yourself from `session_id`, switch to `checkout_url`, or replace the host:
 
 ```diff
 - https://secure.payviox.com/{session_id}
 + https://pay.yourstore.com/{session_id}
 ```
 
-The session itself doesn't change: create it as before with [`POST /session`](/api/endpoints/create-session) on `https://api.payviox.com`, then use its `session_id` in the new URL.
+The session is created as before, on `https://api.payviox.com`.
 
 <CodeGroup>
 ```javascript Node.js (redirect)
@@ -131,9 +140,9 @@ const response = await fetch('https://api.payviox.com/session', {
   },
   body: JSON.stringify(sessionParams)
 });
-const { session_id } = await response.json();
+const { checkout_url } = await response.json();
 
-res.redirect(`https://pay.yourstore.com/${session_id}`);
+res.redirect(checkout_url); // https://pay.yourstore.com/{session_id}
 ```
 
 ```html HTML (iframe)
@@ -219,16 +228,16 @@ If your site sends a `Content-Security-Policy` header, allow your subdomain in t
 
 - **Server-side calls** with your secret key (`sk_`) stay on `https://api.payviox.com`: `POST /session`, `GET /payment/{session_id}`, subscriptions, balance. Don't send them to your subdomain.
 - **Webhooks** don't change: same URL, same events, same HMAC-SHA256 signature.
-- **Payment links you build yourself** (emails, fallbacks): replace `secure.payviox.com` with your subdomain there too, ideally from a single setting so you can switch back in one place.
+- **Payment links** (emails, fallbacks): send the `checkout_url` from the session response. If you build links yourself, replace `secure.payviox.com` with your subdomain there too, ideally from a single setting so you can switch back in one place.
 - **Subscriptions**: while your domain is active, the customer's self-service `management_url` (in webhooks and the subscriptions API) points to your subdomain: `https://pay.yourstore.com/subscription/...`. Always use the URL Payviox gives you rather than rewriting its host. The same link also works on `secure.payviox.com`.
 
 ## Switch back, remove or change your domain
 
-**To switch back** to `secure.payviox.com`, change your integration (the URL, or remove `checkoutUrl`) and leave the domain connected. Both addresses keep working, so nothing breaks for customers already on your subdomain.
+**To switch back** to `secure.payviox.com` while keeping the domain connected, change your integration: remove `checkoutUrl` from the SDK, or stop using your subdomain in the URLs you build. Both addresses keep working, so nothing breaks for customers already on your subdomain. `checkout_url` keeps pointing to your subdomain as long as the domain is active.
 
 **To remove the domain**, click **Remove domain** in the **Checkout Domain** tab and confirm. Your subdomain stops serving the checkout **immediately**:
 - switch your integration first, and wait for open payment sessions to finish or expire;
-- links on your subdomain that you already sent break, including subscription `management_url` links sent by email. New `management_url` values go back to `secure.payviox.com`.
+- links on your subdomain that you already sent break, including subscription `management_url` links sent by email. New `checkout_url` and `management_url` values go back to `secure.payviox.com`.
 
 You can then delete the CNAME record at your DNS provider.
 

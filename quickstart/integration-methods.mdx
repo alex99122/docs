@@ -78,7 +78,7 @@ The SDK creates the session itself with your public key via [`createSession()`](
 </Card>
 
 <Card title="REST API only — no browser" icon="server" href="/api/introduction">
-Your server creates the session and sends the customer to `https://secure.payviox.com/{session_id}` itself — a plain HTTP redirect, or a link in an email.
+Your server creates the session and sends the customer to the `checkout_url` from the response (`https://secure.payviox.com/{session_id}`) itself — a plain HTTP redirect, or a link in an email.
 
 **Use it when:**
 - There is no browser to run the SDK in (backend service, cron, worker)
@@ -128,7 +128,7 @@ Same as the recommended path, but call `openIframe(session_id, { iframeTarget })
 </Accordion>
 
 <Accordion title="You have no browser in the flow">
-Use the REST API on its own: create the session, then send the customer to `https://secure.payviox.com/{session_id}` — by HTTP redirect, email link, or however your product reaches them. With a [custom checkout domain](/guides/custom-checkout-domain), use `https://pay.yourstore.com/{session_id}` instead.
+Use the REST API on its own: create the session, then send the customer to the `checkout_url` from the response (`https://secure.payviox.com/{session_id}`) — by HTTP redirect, email link, or however your product reaches them. With a [custom checkout domain](/guides/custom-checkout-domain), `checkout_url` points to your subdomain once it's active.
 </Accordion>
 </AccordionGroup>
 
