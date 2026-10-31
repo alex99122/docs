@@ -27,7 +27,8 @@
           {
             "group": "Guides",
             "pages": [
-              "guides/subscriptions"
+              "guides/subscriptions",
+              "guides/custom-checkout-domain"
             ]
           }
         ]

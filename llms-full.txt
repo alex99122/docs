@@ -11,7 +11,7 @@ Recurring billing (subscriptions) is built in: same `POST /session` with a `subs
 - Website: https://payviox.com
 - Dashboard: https://dash.payviox.com
 - API base URL: https://api.payviox.com
-- Payment page: https://secure.payviox.com/{session_id}
+- Payment page: https://secure.payviox.com/{session_id} (or the merchant's own subdomain, see Custom Checkout Domain)
 - SDK CDN: https://sdk.payviox.com/payviox.js
 - Docs: https://docs.payviox.com
 - Support: support@payviox.com
@@ -115,6 +115,8 @@ const payviox = new Payviox('pk_live_xxxxxxxxxxxx');
 ```
 
 The constructor takes your public API key (string). The SDK auto-configures the API endpoint (https://api.payviox.com) and payment page URL (https://secure.payviox.com).
+
+Optional second argument `{ checkoutUrl?: string }`: the merchant's active custom checkout domain, e.g. `new Payviox('pk_live_xxx', { checkoutUrl: 'https://pay.yourstore.com' })`. The payment page then opens at `{checkoutUrl}/{session_id}`, SDK API calls go to `{checkoutUrl}/api`, and iframe messages are accepted from that origin. Must be https (else throws `checkoutUrl must be an https URL`); only the origin is kept.
 
 ### createSession(sessionParameters, options?) -> Promise<void | string>
 
@@ -681,6 +683,27 @@ USD only; card / Apple Pay / Google Pay via Stripe only; no free trial (first pe
 ### Testing
 
 Stripe test-mode keys in Payviox + the 5 events on the test-mode endpoint; `interval: "day"` to get a renewal the next day; test cards `4242 4242 4242 4242` (succeeds) and `4000 0027 6000 3184` (renewal fails with `authentication_required`). Stripe test clocks don't apply (Payviox creates the Stripe customer).
+
+---
+
+## Custom Checkout Domain
+
+Serve the payment page from the merchant's own subdomain (e.g. `pay.yourstore.com`) instead of `secure.payviox.com`. Why: some ISP security filters (router security, DNS filtering) block `secure.payviox.com` by name, so the customer's checkout never loads.
+
+### Setup (dashboard, self-service, needs the "Manage settings" team permission)
+1. Dashboard → Settings → Checkout Domain tab → enter the subdomain → Connect domain. Rejected: root domains (`yourstore.com`), names containing `payviox`, a domain already used by another business.
+2. Create a CNAME record at the DNS provider: Name = subdomain without the root domain (`pay` for pay.yourstore.com, `pay.shop` for pay.shop.yourstore.com; some providers want the full name); delete other records (A/AAAA/TXT/MX) on that name first, Target = the value shown in the dashboard (ends in `.pages.dev`). On Cloudflare DNS, set the record to DNS only (grey cloud) — proxied gives error 1014. CAA records must allow `letsencrypt.org` and `pki.goog`.
+3. Wait for Active. Statuses: Waiting for DNS (no CNAME or wrong target — message says which), Issuing certificate, Active, Error (certificate failed: check DNS only / CAA, then Check now). A proxied Cloudflare record usually shows Waiting for DNS ("No CNAME record found"). The tab refreshes every 15 s while open; background checks every 10 min for 72 h; "Check now" forces a check.
+
+### Use once Active
+- No SDK: replace `https://secure.payviox.com/{session_id}` with `https://pay.yourstore.com/{session_id}` (redirect or iframe). Standalone iframe listeners must check `event.origin === 'https://pay.yourstore.com'`. Iframe domain whitelisting still applies to the embedding site.
+- SDK: `new Payviox('pk_...', { checkoutUrl: 'https://pay.yourstore.com' })`; the recommended pattern is unchanged (backend `POST /session` with sk_ on api.payviox.com, then `openSession(session_id)`).
+- SDK script also served at `https://pay.yourstore.com/sdk.js` (same SDK as the CDN, always current).
+- CSP: add the subdomain to `frame-src` (iframe), `script-src` (sdk.js), `connect-src` (SDK with checkoutUrl calls `{checkoutUrl}/api`); keep secure.payviox.com for rollback.
+- Unchanged: server-side `sk_` calls stay on `https://api.payviox.com`; webhooks unchanged; customer IP preserved (`ip` param and fraud checks work); test and live sessions both work. Subscription `management_url` uses the custom domain while active (the token also works on secure.payviox.com). `secure.payviox.com` keeps working.
+
+### Limits
+Subdomains only; one domain per business; a domain can belong to only one business; the whole subdomain is dedicated to the checkout. To switch back, change the integration and keep the domain connected. Remove domain = stops serving immediately (switch integrations back first; already-sent links on the subdomain, including emailed management_url, break).
 
 ---
 

@@ -1,0 +1,296 @@
+---
+title: 'Custom checkout domain'
+description: 'Serve the Payviox payment page from your own subdomain (for example pay.yourstore.com) so ISP security filters that block secure.payviox.com stop blocking your customers. Self-service setup in the dashboard (Settings → Checkout Domain): enter the subdomain, add a CNAME to the target shown (DNS only / grey cloud on Cloudflare, otherwise error 1014), wait for the Active status (Waiting for DNS, Issuing certificate, Active, Error). Then use https://pay.yourstore.com/{session_id} for redirects and iframes, new Payviox(pk, { checkoutUrl }) in the SDK, and https://pay.yourstore.com/sdk.js. Server-side sk_ calls stay on api.payviox.com, webhooks are unchanged. Subdomains only, one domain per business.'
+icon: 'globe'
+---
+
+Serve the Payviox payment page from a subdomain you own, such as `pay.yourstore.com`, instead of `secure.payviox.com`. Your customers see your domain in the address bar, and the payment page works the same way.
+
+## Why use a custom domain
+
+Some internet providers ship security filters that block domain names they don't know well, for example the filters built into some home routers, or DNS filtering at the provider. These filters can block `secure.payviox.com`. The customer then sees an error page or a page that never loads, and can't pay. Nothing reaches Payviox, so the payment session just expires.
+
+These filters block by **name**. A checkout served from your own domain, which the customer already reached to shop with you, gets through.
+
+<Info>
+The default checkout on `secure.payviox.com` keeps working after you add a custom domain. You choose, integration by integration, which address you send your customers to.
+</Info>
+
+## What changes, and what doesn't
+
+| | Without a custom domain | With `pay.yourstore.com` active |
+|---|---|---|
+| Payment page (redirect or iframe) | `https://secure.payviox.com/{session_id}` | `https://pay.yourstore.com/{session_id}` |
+| SDK script | `https://sdk.payviox.com/payviox.js` | `https://pay.yourstore.com/sdk.js` (or keep the CDN / npm package) |
+| SDK initialization | `new Payviox('pk_...')` | `new Payviox('pk_...', { checkoutUrl: 'https://pay.yourstore.com' })` |
+| Server-side calls with your secret key (`sk_`) | `https://api.payviox.com` | `https://api.payviox.com` (unchanged) |
+| Webhooks | Unchanged | Unchanged |
+
+Everything your **customer's browser** loads goes through your subdomain: the payment page, the API calls it makes, and the SDK. Calls from **your server** stay on `api.payviox.com`. Those are server to server, and the filters don't affect them.
+
+The rest works as before: the customer's IP address reaches Payviox unchanged (the `ip` parameter of `POST /session` and the fraud checks keep working), and the domain serves both test (`pk_test_`/`sk_test_`) and live sessions.
+
+## Before you start
+
+You need:
+
+- A domain you own, and access to its DNS settings (at your registrar or DNS provider).
+- A subdomain you don't use for anything else, for example `pay.yourstore.com` or `checkout.yourstore.com`. Payviox serves the whole subdomain, so pick one that has no website, email or other DNS record on it. Deeper subdomains such as `pay.shop.yourstore.com` work too.
+- The **Manage settings** permission on your Payviox business. Team members without it can see the domain and its status, but can't add or remove it.
+
+<Warning>
+**Subdomains only.** A root domain such as `yourstore.com` can't be used: it can't carry a CNAME record. Use `pay.yourstore.com` instead.
+</Warning>
+
+## Set up your domain
+
+<Steps>
+<Step title="Open the Checkout Domain settings">
+In the [dashboard](https://dash.payviox.com), go to **Settings** and open the **Checkout Domain** tab.
+</Step>
+
+<Step title="Enter your subdomain">
+Type the full subdomain in the **Subdomain** field, for example `pay.yourstore.com`, then click **Connect domain**.
+
+The dashboard rejects:
+- a root domain (`yourstore.com`): use a subdomain;
+- a domain that contains `payviox`;
+- a domain already connected to another Payviox business.
+
+Type only the host name: `https://`, a path or a trailing dot are ignored.
+</Step>
+
+<Step title="Add the CNAME record at your DNS provider">
+The tab now shows the DNS record to create. Copy the values with the copy buttons:
+
+| Type | Name | Target |
+|------|------|--------|
+| `CNAME` | Your subdomain without your root domain: `pay` for `pay.yourstore.com`, `pay.shop` for `pay.shop.yourstore.com` | The value shown in the **Target** field, ending in `.pages.dev` |
+
+Most DNS providers add your root domain to the **Name** automatically; some expect the full name (`pay.yourstore.com`). Use whichever form your provider asks for. If your provider shows a preview, it should read `pay.yourstore.com` pointing to the `.pages.dev` target, not `….pages.dev.yourstore.com` (some providers need a trailing dot after the target to prevent this).
+
+A CNAME can't coexist with other records on the same name: delete any A, AAAA, TXT or MX record on your subdomain first.
+
+<Warning>
+**DNS managed by Cloudflare?** Set the record to **DNS only** (grey cloud), not **Proxied** (orange cloud). A proxied record breaks the checkout with Cloudflare **error 1014** ("CNAME Cross-User Banned"), and the certificate can't be issued.
+</Warning>
+
+If your domain has **CAA records**, they must allow the certificate authorities that issue the certificate (`letsencrypt.org` and `pki.goog`). Without a CAA record, there's nothing to do.
+</Step>
+
+<Step title="Wait for the Active status">
+Payviox checks your DNS record and issues an HTTPS certificate for your subdomain. DNS changes usually take a few minutes, sometimes up to an hour.
+
+You don't need to stay on the page. While the tab is open, it refreshes the status every 15 seconds, and Payviox also checks in the background every 10 minutes during the first 72 hours. Click **Check now** to check right away.
+
+When the badge shows **Active**, your domain is ready.
+</Step>
+</Steps>
+
+<Check>
+Once the domain is active, open `https://pay.yourstore.com/sdk.js` in your browser: it returns the JavaScript SDK. Then create a test session and open `https://pay.yourstore.com/{session_id}`: the payment page loads on your domain.
+</Check>
+
+## Domain statuses
+
+| Status in the dashboard | What it means | What to do |
+|---|---|---|
+| **Waiting for DNS** | Payviox can't see your CNAME record yet, or it points somewhere else. The message under the record says which: "No CNAME record found…" or "… points to X instead of Y". | Create or fix the CNAME record, then wait for DNS propagation. |
+| **Issuing certificate** | The CNAME record is correct; the HTTPS certificate for your subdomain is being issued. | Nothing; it usually takes a few minutes. |
+| **Active** | Your subdomain serves the checkout. The dashboard shows the date it became active. | [Use it in your integration](#use-your-domain). |
+| **Error** | Certificate issuance failed. | Make sure the record is **DNS only** (not proxied) and that no CAA record blocks issuance, then click **Check now**. If it stays in Error, contact Payviox support. |
+
+A message under the record explains the last problem found.
+
+<Note>
+A Cloudflare record left on **Proxied** usually shows **Waiting for DNS** with "No CNAME record found": a proxied record hides the CNAME. Switch it to **DNS only**.
+</Note>
+
+## Use your domain
+
+Once the status is **Active**, the tab shows ready-to-copy snippets with your own domain. In the examples below, replace `pay.yourstore.com` with your subdomain.
+
+### Without the SDK: redirect or iframe
+
+If you send customers to the payment page yourself (HTTP redirect, payment link, or iframe), replace the host in the URL:
+
+```diff
+- https://secure.payviox.com/{session_id}
++ https://pay.yourstore.com/{session_id}
+```
+
+The session itself doesn't change: create it as before with [`POST /session`](/api/endpoints/create-session) on `https://api.payviox.com`, then use its `session_id` in the new URL.
+
+<CodeGroup>
+```javascript Node.js (redirect)
+const response = await fetch('https://api.payviox.com/session', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.PAYVIOX_SECRET_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(sessionParams)
+});
+const { session_id } = await response.json();
+
+res.redirect(`https://pay.yourstore.com/${session_id}`);
+```
+
+```html HTML (iframe)
+<iframe
+  src="https://pay.yourstore.com/SESSION_ID"
+  width="100%"
+  height="600"
+  style="border: none;"
+></iframe>
+```
+</CodeGroup>
+
+If you embed the page in an iframe without the SDK, also update the origin your `message` listener accepts. The payment page now sends its [iframe events](/sdk/integration/iframe#handling-iframe-events) from your subdomain:
+
+```javascript
+const PAYVIOX_ORIGIN = 'https://pay.yourstore.com';
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== PAYVIOX_ORIGIN) return;
+
+  if (event.data?.type === 'payviox:redirect') {
+    window.location.href = event.data.redirect;
+  } else if (event.data?.type === 'payviox:close') {
+    document.getElementById('payment-container').innerHTML = '';
+  }
+});
+```
+
+<Note>
+Iframe mode still requires the site that **embeds** the iframe (for example `www.yourstore.com`) to be whitelisted in your dashboard settings, as with `secure.payviox.com`. Your checkout subdomain itself doesn't need to be whitelisted.
+</Note>
+
+### With the SDK: `checkoutUrl`
+
+Pass your subdomain as `checkoutUrl` when you create the SDK instance. The SDK then opens the payment page on your domain, sends its own API calls through `https://pay.yourstore.com/api`, and accepts iframe events from your domain.
+
+The recommended integration doesn't change: your backend creates the session with your secret key, and the browser opens it with [`openSession()`](/sdk/api-reference/open-session).
+
+```html
+<script src="https://pay.yourstore.com/sdk.js"></script>
+<script>
+  const payviox = new Payviox('pk_live_your_key', {
+    checkoutUrl: 'https://pay.yourstore.com'
+  });
+
+  async function checkout() {
+    // Your backend creates the session with your secret key (sk_), on api.payviox.com
+    const { session_id } = await fetch('/api/checkout', { method: 'POST' }).then((r) => r.json());
+
+    // Opens https://pay.yourstore.com/{session_id}
+    payviox.openSession(session_id);
+  }
+</script>
+```
+
+`openIframe()`, `createSession()` and `getPaymentsMethods()` use your domain the same way. With the npm package:
+
+```javascript
+import Payviox from '@payviox/sdk';
+
+const payviox = new Payviox('pk_live_your_key', {
+  checkoutUrl: 'https://pay.yourstore.com'
+});
+```
+
+<Tip>
+**Load the SDK from your subdomain.** `https://pay.yourstore.com/sdk.js` is the same SDK as `https://sdk.payviox.com/payviox.js`. Loading it from your domain means a filter that blocks Payviox domains can't block the script either. It's always the latest version, so it supports `checkoutUrl`.
+</Tip>
+
+`checkoutUrl` must start with `https://`; otherwise the constructor throws `checkoutUrl must be an https URL`. Only the origin is used: a path or a trailing slash is ignored. Without `checkoutUrl`, the SDK behaves as before (`api.payviox.com` and `secure.payviox.com`). See the [Payviox class reference](/sdk/api-reference/payviox-class).
+
+### Content Security Policy
+
+If your site sends a `Content-Security-Policy` header, allow your subdomain in the directives you use. Keep `secure.payviox.com` (and `sdk.payviox.com`) too, so you can switch back at any time:
+
+| Directive | When | Add |
+|---|---|---|
+| `frame-src` | Iframe mode | `https://pay.yourstore.com` |
+| `script-src` | You load `https://pay.yourstore.com/sdk.js` | `https://pay.yourstore.com` |
+| `connect-src` | SDK with `checkoutUrl` (its API calls go to `https://pay.yourstore.com/api`) | `https://pay.yourstore.com` |
+
+### Server side, webhooks and subscriptions
+
+- **Server-side calls** with your secret key (`sk_`) stay on `https://api.payviox.com`: `POST /session`, `GET /payment/{session_id}`, subscriptions, balance. Don't send them to your subdomain.
+- **Webhooks** don't change: same URL, same events, same HMAC-SHA256 signature.
+- **Payment links you build yourself** (emails, fallbacks): replace `secure.payviox.com` with your subdomain there too, ideally from a single setting so you can switch back in one place.
+- **Subscriptions**: while your domain is active, the customer's self-service `management_url` (in webhooks and the subscriptions API) points to your subdomain: `https://pay.yourstore.com/subscription/...`. Always use the URL Payviox gives you rather than rewriting its host. The same link also works on `secure.payviox.com`.
+
+## Switch back, remove or change your domain
+
+**To switch back** to `secure.payviox.com`, change your integration (the URL, or remove `checkoutUrl`) and leave the domain connected. Both addresses keep working, so nothing breaks for customers already on your subdomain.
+
+**To remove the domain**, click **Remove domain** in the **Checkout Domain** tab and confirm. Your subdomain stops serving the checkout **immediately**:
+- switch your integration first, and wait for open payment sessions to finish or expire;
+- links on your subdomain that you already sent break, including subscription `management_url` links sent by email. New `management_url` values go back to `secure.payviox.com`.
+
+You can then delete the CNAME record at your DNS provider.
+
+To change domains, remove the current one, then connect the new one: one business has only one domain at a time.
+
+## Limits
+
+- **Subdomains only**: root domains (`yourstore.com`) aren't supported.
+- **One domain per business.**
+- **A domain belongs to one business**: the same subdomain can't be connected to two Payviox businesses.
+- The subdomain must be dedicated to the Payviox checkout: Payviox serves every path on it.
+
+## Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Stuck on Waiting for DNS">
+- Check the message under the record: "No CNAME record found" means the record doesn't exist yet or hasn't propagated; "points to X instead of Y" means the target is wrong.
+- Make sure the record type is **CNAME** (not A or TXT), and the target is exactly the value shown in the dashboard.
+- Some providers add your domain to the name automatically: if you typed `pay.yourstore.com` as the name, the record may have become `pay.yourstore.com.yourstore.com`. Try `pay` alone.
+- On Cloudflare, a **Proxied** record hides the CNAME: set it to **DNS only**.
+- Check the record from a terminal: `dig +short CNAME pay.yourstore.com` should print the target.
+- After 72 hours, background checks stop: click **Check now** once the record is fixed.
+</Accordion>
+
+<Accordion title="Cloudflare error 1014 on my subdomain">
+Your CNAME record is **proxied** (orange cloud) on Cloudflare. Edit the record in your Cloudflare DNS settings and set it to **DNS only** (grey cloud).
+</Accordion>
+
+<Accordion title="Status is Error">
+The HTTPS certificate couldn't be issued. Set the record to **DNS only**, and if your domain has CAA records, allow `letsencrypt.org` and `pki.goog`. Then click **Check now**.
+</Accordion>
+
+<Accordion title="&quot;Custom checkout domains are not available yet on this platform&quot;">
+The feature isn't enabled on the platform you're connected to. Contact Payviox support.
+</Accordion>
+
+<Accordion title="The SDK still opens secure.payviox.com">
+- Check that you pass `{ checkoutUrl: 'https://pay.yourstore.com' }` as the **second** argument of `new Payviox()`.
+- An old copy of the SDK ignores `checkoutUrl`. Load `https://pay.yourstore.com/sdk.js`, or update `@payviox/sdk`.
+</Accordion>
+
+<Accordion title="Iframe events are ignored">
+Your `message` listener still checks `event.origin` against `https://secure.payviox.com`. Change it to your subdomain, or use the SDK with `checkoutUrl`, which handles it for you.
+</Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+<Card title="Choose your integration method" icon="route" href="/quickstart/integration-methods">
+The recommended backend session + SDK pattern
+</Card>
+
+<Card title="Payviox class" icon="brackets-curly" href="/sdk/api-reference/payviox-class">
+Constructor options, including `checkoutUrl`
+</Card>
+
+<Card title="Iframe integration" icon="window" href="/sdk/integration/iframe">
+Embed the payment page and handle its events
+</Card>
+
+<Card title="POST /session" icon="plus" href="/api/endpoints/create-session">
+Create the session server-side
+</Card>
+</CardGroup>
