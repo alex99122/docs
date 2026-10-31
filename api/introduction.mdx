@@ -84,6 +84,8 @@ https://secure.payviox.com/{session_id}
 
 Send the customer there to pay — via the SDK's [`openSession()`](/sdk/api-reference/open-session), an HTTP redirect, or a link in an email. If you passed a `paymentMethodId` for a redirect-based provider, the session response contains a `redirect_url` instead; use that.
 
+If you serve the checkout from your own subdomain, the page is at `https://pay.yourstore.com/{session_id}` instead; API calls stay on `https://api.payviox.com`. See [Custom checkout domain](/guides/custom-checkout-domain).
+
 ## Rate Limits
 
 Rate limiting is enforced on all API endpoints. If you exceed the limit, you will receive a `429 Too Many Requests` response with a `Retry-After` header indicating when you can retry.

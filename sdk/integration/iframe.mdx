@@ -1,6 +1,6 @@
 ---
 title: "Iframe integration"
-description: "Embed the Payviox payment form directly in your page using an iframe. Requires domain whitelisting. Configure width, height, border, transparency via iframeConfig. Handles payviox:redirect and payviox:close postMessage events for provider redirects and iframe dismissal. Includes standalone integration example without SDK."
+description: "Embed the Payviox payment form directly in your page using an iframe. Requires domain whitelisting. Configure width, height, border, transparency via iframeConfig. Handles payviox:redirect and payviox:close postMessage events for provider redirects and iframe dismissal. Includes standalone integration example without SDK. Works with a custom checkout domain (https://pay.yourstore.com/{session_id}, checkoutUrl option)."
 icon: "window"
 ---
 
@@ -184,8 +184,14 @@ window.addEventListener('message', (event) => {
 ```
 
 <Warning>
-Always validate `event.origin` against `https://secure.payviox.com` before acting on any message.
+Always validate `event.origin` against the checkout origin before acting on any message: `https://secure.payviox.com`, or your [custom checkout domain](#custom-checkout-domain).
 </Warning>
+
+## Custom checkout domain
+
+If you serve the checkout from your own subdomain (for example `pay.yourstore.com`), load the iframe from `https://pay.yourstore.com/{session_id}`. In a standalone integration, check `event.origin` against `https://pay.yourstore.com` instead of `https://secure.payviox.com`. With the SDK, pass `checkoutUrl: 'https://pay.yourstore.com'` to `new Payviox()`: it handles both for you. Domain whitelisting still applies to the site that embeds the iframe. If your site sends a Content-Security-Policy, add your subdomain to `frame-src`.
+
+See [Custom checkout domain](/guides/custom-checkout-domain) for setup.
 
 ## Troubleshooting
 
@@ -208,6 +214,7 @@ if (!target) {
 // Add to your HTML if needed:
 // <meta http-equiv="Content-Security-Policy" 
 //       content="frame-src https://secure.payviox.com;">
+// (with a custom checkout domain, use it instead: frame-src https://pay.yourstore.com;)
 ```
 </Accordion>
 
