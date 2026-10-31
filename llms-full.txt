@@ -65,7 +65,7 @@ In this case, tell the merchant to verify `amount` and `order_id` in the webhook
 - Payment link sent by email/messaging, OR
 - Need direct provider redirect (skip Payviox payment page entirely)
 
-Then send the customer to `https://secure.payviox.com/{session_id}` yourself.
+Then send the customer to the `checkout_url` returned by `POST /session` yourself (`https://secure.payviox.com/{session_id}`, or the merchant's own subdomain when a custom checkout domain is active).
 
 ### USE REST API with paymentMethodId IF:
 
@@ -339,7 +339,7 @@ Subscription-specific errors:
 - 400 `{ "subscription": ["No payment method that supports subscriptions is configured on your account... (public and secret keys)."] }` — Stripe keys missing.
 - 400 `{ "error": "subscription_setup_incomplete", "message": "...", "missing_events": ["invoice.paid", ...] }` — the merchant's Stripe webhook endpoint `https://api.payviox.com/payment/stripe/webhook` is missing or lacks renewal events. Result cached up to 1 hour.
 
-After creating a session, redirect the customer to: `https://secure.payviox.com/{session_id}`
+After creating a session, redirect the customer to the `checkout_url` from the response: `https://secure.payviox.com/{session_id}`, or the merchant's subdomain when a custom checkout domain is active. Response 201: `{ "session_id": "...", "checkout_url": "..." }` (plus `redirect_url` or `payment_error` with `paymentMethodId`).
 
 ### GET /payments/methods — Get Payment Methods
 
@@ -696,7 +696,7 @@ Serve the payment page from the merchant's own subdomain (e.g. `pay.yourstore.co
 3. Wait for Active. Statuses: Waiting for DNS (no CNAME or wrong target — message says which), Issuing certificate, Active, Error (certificate failed: check DNS only / CAA, then Check now). A proxied Cloudflare record usually shows Waiting for DNS ("No CNAME record found"). The tab refreshes every 15 s while open; background checks every 10 min for 72 h; "Check now" forces a check.
 
 ### Use once Active
-- No SDK: replace `https://secure.payviox.com/{session_id}` with `https://pay.yourstore.com/{session_id}` (redirect or iframe). Standalone iframe listeners must check `event.origin === 'https://pay.yourstore.com'`. Iframe domain whitelisting still applies to the embedding site.
+- No SDK: use `checkout_url` from `POST /session`, which becomes `https://pay.yourstore.com/{session_id}` once the domain is active (or replace the host yourself; redirect or iframe). Standalone iframe listeners must check `event.origin === 'https://pay.yourstore.com'`. Iframe domain whitelisting still applies to the embedding site.
 - SDK: `new Payviox('pk_...', { checkoutUrl: 'https://pay.yourstore.com' })`; the recommended pattern is unchanged (backend `POST /session` with sk_ on api.payviox.com, then `openSession(session_id)`).
 - SDK script also served at `https://pay.yourstore.com/sdk.js` (same SDK as the CDN, always current).
 - CSP: add the subdomain to `frame-src` (iframe), `script-src` (sdk.js), `connect-src` (SDK with checkoutUrl calls `{checkoutUrl}/api`); keep secure.payviox.com for rollback.
