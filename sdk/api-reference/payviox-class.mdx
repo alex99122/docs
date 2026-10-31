@@ -1,6 +1,6 @@
 ---
 title: "Payviox Class"
-description: "Initialize and configure the Payviox SDK"
+description: "Initialize the Payviox SDK: new Payviox(token, options?) with your public key (pk_) and the optional checkoutUrl option to serve the payment page and SDK API calls from your own subdomain (custom checkout domain)"
 icon: "brackets-curly"
 ---
 
@@ -10,12 +10,17 @@ The Payviox class is the main entry point for the Payviox SDK. It provides metho
 
 ## Constructor
 
-### `new Payviox(token)`
+### `new Payviox(token, options?)`
 
 Creates a new instance of the Payviox SDK.
 
 ```javascript
 const payviox = new Payviox('your_api_token');
+
+// With a custom checkout domain
+const payviox = new Payviox('your_api_token', {
+  checkoutUrl: 'https://pay.yourstore.com'
+});
 ```
 
 <Note>
@@ -27,6 +32,17 @@ The SDK takes your **public key** (`pk_`), which is designed to run in the brows
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `token` | `string` | ✅ Required | Your Payviox API token. Obtain this from your dashboard at [dash.payviox.com](https://dash.payviox.com). Use test tokens (`pk_test_...`) for development and live tokens (`pk_live_...`) for production. |
+| `options` | `object` | Optional | SDK options, see below. |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `checkoutUrl` | `string` | `https://secure.payviox.com` | Your [custom checkout domain](/guides/custom-checkout-domain), for example `https://pay.yourstore.com`. The domain must be **Active** in your dashboard (**Settings** → **Checkout Domain**). The SDK then opens the payment page at `{checkoutUrl}/{session_id}` (redirect and iframe), sends its API calls to `{checkoutUrl}/api` instead of `https://api.payviox.com`, and accepts iframe events from this origin. Must start with `https://`, otherwise the constructor throws `checkoutUrl must be an https URL`. Only the origin is kept: a path or trailing slash is ignored. |
+
+<Note>
+`checkoutUrl` only affects the browser. Your server-side calls with the secret key (`sk_`) stay on `https://api.payviox.com`, and webhooks don't change.
+</Note>
 
 ## Examples
 
