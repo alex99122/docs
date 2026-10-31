@@ -9,7 +9,7 @@ description: 'Create a payment session with amount, currency, and items. Support
 Creates a new payment session for your customer. The session ID can be used to redirect the customer to the payment page or to fetch available payment methods.
 
 <Tip>
-  **Recommended flow:** call this endpoint from your backend with your secret key (so the amount is computed server-side and you can pass `ip`), return the `session_id` to your frontend, and let the SDK's [`openSession()`](/sdk/api-reference/open-session) take the customer to the payment page. If there's no browser in your flow, send the customer to `https://secure.payviox.com/{session_id}` yourself. See [Choose your integration method](/quickstart/integration-methods).
+  **Recommended flow:** call this endpoint from your backend with your secret key (so the amount is computed server-side and you can pass `ip`), return the `session_id` to your frontend, and let the SDK's [`openSession()`](/sdk/api-reference/open-session) take the customer to the payment page. If there's no browser in your flow, send the customer to the `checkout_url` returned in the response yourself. See [Choose your integration method](/quickstart/integration-methods).
 </Tip>
 
 <Note>
@@ -448,7 +448,7 @@ app.post('/checkout', async (req, res) => {
   }
   
   // Otherwise, redirect to Payviox payment page
-  res.redirect(`https://secure.payviox.com/${data.session_id}`);
+  res.redirect(data.checkout_url);
 });
 ```
 
@@ -477,7 +477,7 @@ Route::post('/checkout', function (Request $request) {
     }
     
     // Otherwise, redirect to Payviox payment page
-    return redirect()->away('https://secure.payviox.com/' . $data['session_id']);
+    return redirect()->away($data['checkout_url']);
 });
 ```
 
@@ -511,7 +511,7 @@ def checkout():
         return redirect(data['redirect_url'])
     
     # Otherwise, redirect to Payviox payment page
-    return redirect(f"https://secure.payviox.com/{data['session_id']}")
+    return redirect(data['checkout_url'])
 ```
 
 </CodeGroup>
@@ -540,6 +540,7 @@ If the payment initiation fails (e.g., provider API error), the response will in
 ```json
 {
   "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "checkout_url": "https://secure.payviox.com/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "payment_error": {
     "success": false,
     "message": "Payment creation failed",
@@ -549,7 +550,7 @@ If the payment initiation fails (e.g., provider API error), the response will in
 ```
 
 <Warning>
-  When `payment_error` is present, the session is still created. You can redirect the customer to `https://secure.payviox.com/{session_id}` to let them try another payment method.
+  When `payment_error` is present, the session is still created. You can redirect the customer to the `checkout_url` from the response to let them try another payment method.
 </Warning>
 
 ## Subscriptions
@@ -627,21 +628,25 @@ const { session_id } = await response.json(); // hand it to payviox.openSession(
 
 </CodeGroup>
 
-The response is the usual `{ "session_id": "..." }` (201). The subscription itself (`psub_...`) only exists once the first payment succeeds: you receive it in the `subscription` block of the `succeeded` [webhook](/webhooks/integration#subscription-events).
+The response is the usual `{ "session_id": "...", "checkout_url": "..." }` (201). The subscription itself (`psub_...`) only exists once the first payment succeeds: you receive it in the `subscription` block of the `succeeded` [webhook](/webhooks/integration#subscription-events).
 
 ## Example Response
+
+Every successful response (201) carries `checkout_url`, the payment page for this session. It points to `https://secure.payviox.com/{session_id}`, or to your own subdomain once a [custom checkout domain](/guides/custom-checkout-domain) is active. Send the customer to this URL rather than building it yourself: connecting or removing a custom domain then needs no change on your side. The URL is set when the session is created and is present in every 201 response, including those with `redirect_url` or `payment_error`: only sessions created after the domain becomes **Active** (or after you remove it) use the new address.
 
 <ResponseExample>
 
 ```json Standard Response (201)
 {
-  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "checkout_url": "https://secure.payviox.com/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 }
 ```
 
 ```json Direct Redirect Response (201)
 {
   "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "checkout_url": "https://secure.payviox.com/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "redirect_url": "https://secure.zen.com/checkout/abc123xyz"
 }
 ```
@@ -649,6 +654,7 @@ The response is the usual `{ "session_id": "..." }` (201). The subscription itse
 ```json Payment Error Response (201)
 {
   "session_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "checkout_url": "https://secure.payviox.com/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
   "payment_error": {
     "success": false,
     "message": "Payment creation failed",
@@ -844,7 +850,7 @@ After creating a session:
     icon="link"
     href="/quickstart/integration-methods"
   >
-    Send the customer to `https://secure.payviox.com/{session_id}` yourself
+    Send the customer to the `checkout_url` from the response yourself
   </Card>
   <Card
     title="Get Payment Methods"

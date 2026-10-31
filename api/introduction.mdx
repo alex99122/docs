@@ -82,7 +82,7 @@ Once you have a `session_id`, the hosted payment page for it is:
 https://secure.payviox.com/{session_id}
 ```
 
-Send the customer there to pay — via the SDK's [`openSession()`](/sdk/api-reference/open-session), an HTTP redirect, or a link in an email. If you passed a `paymentMethodId` for a redirect-based provider, the session response contains a `redirect_url` instead; use that.
+Send the customer there to pay — via the SDK's [`openSession()`](/sdk/api-reference/open-session), an HTTP redirect, or a link in an email. The session response gives you this URL directly in `checkout_url`, on your own subdomain when a [custom checkout domain](/guides/custom-checkout-domain) is active: prefer it to building the URL yourself. If you passed a `paymentMethodId` for a redirect-based provider, the session response also contains a `redirect_url`; use that.
 
 If you serve the checkout from your own subdomain, the page is at `https://pay.yourstore.com/{session_id}` instead; API calls stay on `https://api.payviox.com`. See [Custom checkout domain](/guides/custom-checkout-domain).
 

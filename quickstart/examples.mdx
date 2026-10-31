@@ -143,7 +143,7 @@ curl -X POST https://api.payviox.com/session \
   }'
 ```
 
-The response contains a `session_id`. Build the payment page URL from it and send the customer there — an HTTP redirect, a link in an email, wherever your product reaches them:
+The response contains a `session_id` and a `checkout_url`. Send the customer to `checkout_url` — an HTTP redirect, a link in an email, wherever your product reaches them. It has this form (or your own subdomain with a [custom checkout domain](/guides/custom-checkout-domain)):
 
 ```
 https://secure.payviox.com/{session_id}

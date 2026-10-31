@@ -100,6 +100,13 @@ components:
         session_id:
           type: string
           description: Unique identifier for the created session
+        checkout_url:
+          type: string
+          format: uri
+          description: >-
+            Payment page for this session. `https://secure.payviox.com/{session_id}`, or the
+            merchant's own subdomain once a custom checkout domain is active. Send the customer
+            here rather than building the URL.
     GetBalanceResponse:
       type: object
       properties:
