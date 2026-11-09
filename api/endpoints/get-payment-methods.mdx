@@ -29,6 +29,14 @@ Authorization: Bearer YOUR_API_KEY
   **Example:** `US,GB,FR`
   
   **Maximum:** 200 countries
+
+  With a **single** country, the fees are those a customer from that country pays: some card processors add a cross-border fee for cards from outside their region. Pass the country your customer selected to show them the price they will pay on the payment page. With several countries or none, the base rates are returned, without any cross-border fee.
+</ParamField>
+
+<ParamField query="amount" type="integer">
+  Amount of the payment in cents (USD). When set, `fees` returns the exact fees for that amount instead of the rates: `{ "amount": 447 }`, in cents, the same figure as on the payment page.
+
+  **Example:** `10000` ($100.00)
 </ParamField>
 
 <ParamField query="currencies" type="string">
@@ -71,12 +79,16 @@ Returns an object where each key is a payment method ID and the value contains t
       Fee structure for this payment method
       
       <Expandable title="Fees Object">
-        <ResponseField name="static_fees" type="number">
-          Fixed fee in dollars (e.g., 0.30 = $0.30)
+        <ResponseField name="static_fees" type="integer">
+          Fixed fee in cents (e.g., 30 = $0.30). Returned without `amount`.
         </ResponseField>
         
-        <ResponseField name="percent_fees" type="number">
-          Percentage fee as a decimal (e.g., 0.029 = 2.9%)
+        <ResponseField name="percent_fees" type="integer">
+          Percentage fee in hundredths of a percent (e.g., 290 = 2.90%). Returned without `amount`.
+        </ResponseField>
+
+        <ResponseField name="amount" type="number">
+          Exact fees in cents for the requested `amount`, add-on fees included. Returned only when `amount` is set, in place of the two rates.
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -211,8 +223,8 @@ func main() {
     "countries": null,
     "currencies": null,
     "fees": {
-      "static_fees": 0.30,
-      "percent_fees": 0.029
+      "static_fees": 30,
+      "percent_fees": 290
     },
     "name": "Credit Card (Stripe)",
     "image": "https://cdn.payviox.com/images/stripe.png"
@@ -222,7 +234,7 @@ func main() {
     "currencies": ["BRL", "USD"],
     "fees": {
       "static_fees": 0,
-      "percent_fees": 0.015
+      "percent_fees": 150
     },
     "name": "PIX (Nicepay)",
     "image": "https://cdn.payviox.com/images/pix.png"
@@ -232,7 +244,7 @@ func main() {
     "currencies": ["USD"],
     "fees": {
       "static_fees": 0,
-      "percent_fees": 0.01
+      "percent_fees": 100
     },
     "name": "USDT (Zen)",
     "image": "https://cdn.payviox.com/images/usdt.png"
@@ -242,10 +254,24 @@ func main() {
     "currencies": ["USD"],
     "fees": {
       "static_fees": 0,
-      "percent_fees": 0.01
+      "percent_fees": 100
     },
     "name": "Bitcoin (Crypto.com)",
     "image": "https://cdn.payviox.com/images/bitcoin.png"
+  }
+}
+```
+
+```json With amount (200)
+{
+  "whop_card": {
+    "countries": null,
+    "currencies": ["USD"],
+    "fees": {
+      "amount": 447
+    },
+    "name": "Card",
+    "image": "https://img.payviox.com/payment-method/card.svg"
   }
 }
 ```
@@ -283,15 +309,17 @@ func main() {
 
 ### Fee Structure
 
-Fees are calculated as:
+The percentage applies to the **total** the customer pays, fees included, not to the amount alone:
 ```
-Total Fee = static_fees + (amount × percent_fees)
+Total ≈ (amount + static_fees) / (1 − percent_fees / 10000)
 ```
 
-**Example:** For a $100 payment with `static_fees: 0.30` and `percent_fees: 0.029`:
+**Example:** For a $100 payment with `static_fees: 30` and `percent_fees: 290`:
 ```
-Total Fee = $0.30 + ($100 × 0.029) = $0.30 + $2.90 = $3.20
+Total ≈ ($100 + $0.30) / (1 − 0.029) = $103.30, so $3.30 of fees
 ```
+
+Add-on fees passed on to the customer (fraud screening, for example) come on top. To display the exact price, pass `amount`: `fees.amount` is the figure the payment page will charge.
 
 ### Company vs Individual Fees
 
@@ -338,11 +366,15 @@ When `is_company=true`, some payment methods may have adjusted fee structures fo
 ## Best Practices
 
 <Warning>
-  **Cache Responsibly:** Payment methods and fees can change. Cache the response for a short period (recommended: 5-15 minutes) and refresh regularly.
+  **Cache Responsibly:** Payment methods and fees can change. Cache the response for a short period (recommended: 5-15 minutes) and refresh regularly. Fees depend on `countries` and `amount`: include both in your cache key.
 </Warning>
 
 <Tip>
   **Show Relevant Methods:** Always filter by the customer's country and your transaction currency to show only relevant payment options.
+</Tip>
+
+<Tip>
+  **Show the Price the Customer Will Pay:** Pass the customer's country alone in `countries` and the payment `amount`. The `fees.amount` you get is the one the payment page charges.
 </Tip>
 
 ## Next Steps

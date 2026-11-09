@@ -343,7 +343,9 @@ After creating a session, redirect the customer to the `checkout_url` from the r
 
 ### GET /payments/methods — Get Payment Methods
 
-Query params: `countries` (comma-separated), `currencies` (comma-separated), `is_company` (boolean).
+Query params: `countries` (comma-separated), `currencies` (comma-separated), `is_company` (boolean), `amount` (cents, optional).
+
+A single country in `countries` returns the fees a customer from that country pays (card processors may add a cross-border fee). With `amount`, `fees` is `{ "amount": <exact fees in cents, add-on fees included> }`, the figure the payment page charges.
 
 Response (200): Object where keys are payment method IDs:
 ```json
@@ -353,12 +355,12 @@ Response (200): Object where keys are payment method IDs:
     "image": "https://cdn.payviox.com/images/stripe.png",
     "countries": null,
     "currencies": null,
-    "fees": { "static_fees": 0.30, "percent_fees": 0.029 }
+    "fees": { "static_fees": 30, "percent_fees": 290 }
   }
 }
 ```
 
-`null` for countries/currencies means globally available. Fee formula: `total_fee = static_fees + (amount_in_dollars * percent_fees)`.
+`null` for countries/currencies means globally available. `static_fees` in cents, `percent_fees` in hundredths of a percent (290 = 2.90%). The percentage applies to the total paid: `total ≈ (amount + static_fees) / (1 - percent_fees / 10000)`, plus add-on fees passed on to the customer. Pass `amount` for the exact figure.
 
 ### GET /balance — Get Business Balance
 
