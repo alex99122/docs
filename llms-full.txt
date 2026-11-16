@@ -25,6 +25,8 @@ Recurring billing (subscriptions) is built in: same `POST /session` with a `subs
 
 Both key types work with `POST /session` and `GET /payments/methods`. Secret keys unlock the `ip` and `subscription` parameters on session creation, and are the only keys accepted by `GET /balance`, `GET /payment/{session_id}` and the `/subscriptions` endpoints. Test keys use prefix `pk_test_` / `sk_test_`.
 
+The secret key is displayed in full only once, when generated in the dashboard (Developer > API Keys). Payviox stores only a fingerprint and afterwards shows its last 4 characters (`sk_live_…a1b2`). A lost secret key cannot be shown again: regenerate it, and the previous key stops working immediately.
+
 Authentication: `Authorization: Bearer YOUR_API_KEY`
 
 ---
