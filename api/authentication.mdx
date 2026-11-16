@@ -1,11 +1,11 @@
 ---
 title: 'Authentication'
-description: 'Authenticate API requests using Bearer tokens. Public key (pk_) for client-side SDK, secret key (sk_) for server-side with optional IP fraud prevention. Covers test vs live modes and API playground usage'
+description: 'Authenticate API requests using Bearer tokens. Public key (pk_) for client-side SDK, secret key (sk_) for server-side with optional IP fraud prevention. The secret key is shown only once, when generated, and must be regenerated if lost. Covers test vs live modes and API playground usage'
 ---
 
 ## API Key Authentication
 
-All API requests must be authenticated using your API key. You can find your API keys in the [Payviox Dashboard](https://dash.payviox.com) under the Developer section.
+All API requests must be authenticated using your API key. You can find your API keys in the [Payviox Dashboard](https://dash.payviox.com) under the Developer section. The secret key is displayed in full only once, when you generate it: copy it straight into your server's configuration.
 
 <Warning>
   **Keep your API keys secure!** Never share your Secret API Key in publicly accessible areas such as GitHub, client-side code, and so forth.
@@ -55,7 +55,7 @@ Each endpoint in this documentation includes an interactive playground where you
 
 <Steps>
   <Step title="Get Your API Key">
-    Copy your API key from the [Payviox Dashboard](https://dash.payviox.com)
+    Copy your public key from the [Payviox Dashboard](https://dash.payviox.com), or use the secret key you saved when you generated it
   </Step>
   <Step title="Open an Endpoint">
     Navigate to any endpoint page (e.g., Create Session)
@@ -251,9 +251,15 @@ puts JSON.parse(response.body)
 
 1. Log in to your [Payviox Dashboard](https://dash.payviox.com)
 2. Navigate to **Developer** > **API Keys**
-3. Copy your keys:
-   - **Public API Key**: For frontend/SDK integration
-   - **Secret API Key**: For backend/server-side integration
+3. Get your keys:
+   - **Public API Key**: For frontend/SDK integration. You can copy it at any time.
+   - **Secret API Key**: For backend/server-side integration. It is displayed in full **only once**, right after you generate it. Copy it then and store it in your server's environment variables or secret manager.
+
+Payviox does not keep your secret key: only a fingerprint of it is stored. The dashboard then shows its last four characters (for example `sk_live_…a1b2`), so you can check which key your integration uses.
+
+<Warning>
+  A lost secret key cannot be displayed again, by Payviox or by anyone on your team. Regenerate it and update your integration: the previous key stops working immediately.
+</Warning>
 
 ### Regenerating API Keys
 
@@ -265,6 +271,9 @@ If your API key has been compromised, you can regenerate it from the dashboard:
   </Step>
   <Step title="Regenerate Key">
     Click **Regenerate API Key**
+  </Step>
+  <Step title="Copy the New Key">
+    A new secret key is displayed only once: copy it before leaving the page
   </Step>
   <Step title="Update Your Integration">
     Update your integration with the new API key
